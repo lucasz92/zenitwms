@@ -17,6 +17,12 @@ import {
     ArrowUpDown,
     ChevronLeft,
     ChevronRight,
+    CopyPlus,
+    AlertCircle,
+    Printer,
+    FileText as FileTextIcon,
+    Tags,
+    ImagePlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +45,11 @@ import { cn } from "@/lib/utils";
 import { StockBadge } from "./stock-badge";
 import { ProductModal } from "./product-modal";
 import { DeleteProductDialog } from "./delete-product-dialog";
+import { ProductDetailsModal } from "./product-details-modal";
+import { PrintModal } from "./print-modal";
+import { PrintWarningModal } from "./print-warning-modal";
+import { ReportAlertModal } from "./report-alert-modal";
+import { ProductImageModal } from "./product-image-modal";
 import { getStockStatus, UNIT_LABELS, type UnitType } from "@/types/product";
 import type { ProductRow } from "@/lib/db/queries/products";
 import { exportTableToPDF } from "@/lib/utils/pdf-generator";
@@ -64,6 +75,11 @@ export function InventoryTable({ products }: InventoryTableProps) {
     const [createOpen, setCreateOpen] = useState(false);
     const [editProduct, setEditProduct] = useState<ProductRow | null>(null);
     const [deleteProduct, setDeleteProduct] = useState<ProductRow | null>(null);
+    const [detailsProduct, setDetailsProduct] = useState<ProductRow | null>(null);
+    const [printProduct, setPrintProduct] = useState<ProductRow | null>(null);
+    const [warningPrintProduct, setWarningPrintProduct] = useState<ProductRow | null>(null);
+    const [alertProduct, setAlertProduct] = useState<ProductRow | null>(null);
+    const [imageProduct, setImageProduct] = useState<ProductRow | null>(null);
 
     // Filter + sort
     const filtered = useMemo(() => {
@@ -111,10 +127,15 @@ export function InventoryTable({ products }: InventoryTableProps) {
     };
 
     const prepareExportData = () => {
-        const head = ["CÓDIGO", "PRODUCTO", "STOCK", "MIN", "UNIDAD", "UBICACIÓN", "PRECIO"];
+        const head = ["CÓDIGO", "PRODUCTO", "FILA", "COLUMNA", "ESTANTE", "POSICIÓN", "SECTOR", "STOCK", "MIN", "UNIDAD", "PRECIO"];
         const body = filtered.map(p => [
             p.code,
             p.name,
+            p.fila || "-",
+            p.columna || "-",
+            p.estante || "-",
+            p.posicion || "-",
+            p.sector || "-",
             p.stock.toString(),
             p.min_stock.toString(),
             UNIT_LABELS[p.unit_type],
@@ -205,7 +226,7 @@ export function InventoryTable({ products }: InventoryTableProps) {
                         </div>
 
                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                            <DropdownMenuTrigger>
                                 <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
                                     <Download className="h-3.5 w-3.5" />
                                     Exportar
@@ -240,18 +261,21 @@ export function InventoryTable({ products }: InventoryTableProps) {
                         <TableHeader>
                             <TableRow className="bg-muted/40 hover:bg-muted/40">
                                 <TableHead className="w-10 text-center text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5">#</TableHead>
-                                <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5 w-[100px]">
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5 w-[90px]">
                                     <SortButton k="code" label="Código" />
                                 </TableHead>
-                                <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5">
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5 min-w-[200px]">
                                     <SortButton k="name" label="Producto" />
                                 </TableHead>
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5 hidden md:table-cell text-center">Fila</TableHead>
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5 hidden md:table-cell text-center">Col.</TableHead>
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5 hidden lg:table-cell text-center">Estante</TableHead>
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5 hidden lg:table-cell text-center">Pos.</TableHead>
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5 hidden sm:table-cell">Sector</TableHead>
                                 <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5 w-[90px] text-right">
                                     <SortButton k="stock" label="Stock" />
                                 </TableHead>
-                                <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5 hidden md:table-cell">Unidad</TableHead>
-                                <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5 hidden lg:table-cell">Ubicación</TableHead>
-                                <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5 hidden xl:table-cell text-right">Precio</TableHead>
+                                <TableHead className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider py-2.5 hidden md:table-cell text-right">Precio</TableHead>
                                 <TableHead className="w-8" />
                             </TableRow>
                         </TableHeader>
@@ -287,7 +311,16 @@ export function InventoryTable({ products }: InventoryTableProps) {
                                     return (
                                         <TableRow
                                             key={product.id}
-                                            className="group hover:bg-muted/30 transition-colors"
+                                            className="group hover:bg-muted/30 transition-colors md:cursor-default cursor-pointer relative"
+                                            onClick={(e) => {
+                                                if (window.innerWidth < 768) {
+                                                    // Evitar abrir si clickea directamente botones u otros elementos interactivos
+                                                    const target = e.target as HTMLElement;
+                                                    if (!target.closest('button') && !target.closest('.dropdown-trigger-area')) {
+                                                        setDetailsProduct(product);
+                                                    }
+                                                }
+                                            }}
                                         >
                                             <TableCell className="text-center text-xs text-muted-foreground/50 py-2.5">
                                                 {rowNum}
@@ -296,37 +329,50 @@ export function InventoryTable({ products }: InventoryTableProps) {
                                                 <span className="font-mono text-xs font-medium text-foreground bg-muted/60 rounded px-1.5 py-0.5">
                                                     {product.code}
                                                 </span>
+                                                {/* Mobile only location hints */}
+                                                <div className="md:hidden mt-1 flex flex-wrap gap-1">
+                                                    {product.sector && <span className="text-[10px] text-muted-foreground bg-muted/30 px-1 rounded">{product.sector}</span>}
+                                                    {product.fila && <span className="text-[10px] text-muted-foreground bg-muted/30 px-1 rounded">F:{product.fila}</span>}
+                                                    {product.columna && <span className="text-[10px] text-muted-foreground bg-muted/30 px-1 rounded">C:{product.columna}</span>}
+                                                </div>
                                             </TableCell>
-                                            <TableCell className="py-2.5">
+                                            <TableCell className="py-2.5 max-w-[200px]">
                                                 <div className="flex flex-col gap-0.5">
-                                                    <span className="text-sm font-medium text-foreground leading-tight">
+                                                    <span className="text-sm font-medium text-foreground leading-tight truncate">
                                                         {product.name}
                                                     </span>
                                                     {product.description && (
-                                                        <span className="text-xs text-muted-foreground truncate max-w-[260px]">
+                                                        <span className="text-[11px] text-muted-foreground truncate w-full">
                                                             {product.description}
                                                         </span>
                                                     )}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="py-2.5 text-right">
-                                                <StockBadge stock={product.stock} minStock={product.min_stock} />
+
+                                            {/* Legacy Location Columns Breakdown */}
+                                            <TableCell className="py-2.5 hidden lg:table-cell text-center">
+                                                <span className="text-xs font-mono font-medium">{product.fila || "-"}</span>
+                                            </TableCell>
+                                            <TableCell className="py-2.5 hidden lg:table-cell text-center">
+                                                <span className="text-xs font-mono font-medium">{product.columna || "-"}</span>
+                                            </TableCell>
+                                            <TableCell className="py-2.5 hidden xl:table-cell text-center">
+                                                <span className="text-xs font-mono">{product.estante || "-"}</span>
+                                            </TableCell>
+                                            <TableCell className="py-2.5 hidden xl:table-cell text-center">
+                                                <span className="text-xs font-mono">{product.posicion || "-"}</span>
                                             </TableCell>
                                             <TableCell className="py-2.5 hidden md:table-cell">
-                                                <span className="text-xs text-muted-foreground">
-                                                    {UNIT_LABELS[product.unit_type]}
+                                                <span className="text-[11px] font-medium uppercase text-muted-foreground bg-muted/30 px-1.5 py-0.5 rounded">
+                                                    {product.sector || "-"}
                                                 </span>
                                             </TableCell>
-                                            <TableCell className="py-2.5 hidden lg:table-cell">
-                                                {product.location ? (
-                                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                        <MapPin className="h-3 w-3 shrink-0" />
-                                                        <span className="font-mono">{product.location}</span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground/40 italic">Sin ubicar</span>
-                                                )}
+
+                                            <TableCell className="py-2.5 text-right">
+                                                <StockBadge stock={product.stock} minStock={product.min_stock} />
+                                                <div className="text-[10px] text-muted-foreground mt-0.5">{UNIT_LABELS[product.unit_type]}</div>
                                             </TableCell>
+
                                             <TableCell className="py-2.5 hidden xl:table-cell text-right">
                                                 <span className="text-sm text-muted-foreground">
                                                     {product.price != null
@@ -334,9 +380,9 @@ export function InventoryTable({ products }: InventoryTableProps) {
                                                         : "—"}
                                                 </span>
                                             </TableCell>
-                                            <TableCell className="py-2.5 pr-3">
+                                            <TableCell className="py-2.5 pr-3 dropdown-trigger-area">
                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
+                                                    <DropdownMenuTrigger>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -349,16 +395,47 @@ export function InventoryTable({ products }: InventoryTableProps) {
                                                     <DropdownMenuContent align="end" className="w-40">
                                                         <DropdownMenuItem
                                                             className="text-xs gap-2"
+                                                            onClick={() => setDetailsProduct(product)}
+                                                        >
+                                                            <FileTextIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                                            Ver detalles
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            className="text-xs gap-2"
+                                                            onClick={() => setImageProduct(product)}
+                                                        >
+                                                            <ImagePlus className="h-3.5 w-3.5 text-muted-foreground" />
+                                                            Ver / Agregar foto
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            className="text-xs gap-2"
                                                             onClick={() => setEditProduct(product)}
                                                         >
                                                             <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                                                            Editar
+                                                            Editar producto
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem className="text-xs gap-2">
-                                                            <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                                                            Ver ubicación
+                                                        <DropdownMenuItem
+                                                            className="text-xs gap-2"
+                                                            onClick={() => setPrintProduct(product)}
+                                                        >
+                                                            <Printer className="h-3.5 w-3.5 text-muted-foreground" />
+                                                            Imprimir etiqueta
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            className="text-xs gap-2"
+                                                            onClick={() => setWarningPrintProduct(product)}
+                                                        >
+                                                            <CopyPlus className="h-3.5 w-3.5 text-orange-500/80" />
+                                                            Ubicación doble
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            className="text-xs gap-2 text-destructive focus:text-destructive"
+                                                            onClick={() => setAlertProduct(product)}
+                                                        >
+                                                            <AlertCircle className="h-3.5 w-3.5" />
+                                                            Reportar problema
+                                                        </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             className="text-xs gap-2 text-destructive focus:text-destructive"
                                                             onClick={() => setDeleteProduct(product)}
@@ -428,6 +505,33 @@ export function InventoryTable({ products }: InventoryTableProps) {
                 onClose={() => setDeleteProduct(null)}
                 product={deleteProduct}
             />
+            <ProductDetailsModal
+                open={!!detailsProduct}
+                onClose={() => setDetailsProduct(null)}
+                product={detailsProduct}
+            />
+            <PrintModal
+                open={!!printProduct}
+                onClose={() => setPrintProduct(null)}
+                product={printProduct}
+            />
+            <PrintWarningModal
+                open={!!warningPrintProduct}
+                onClose={() => setWarningPrintProduct(null)}
+                product={warningPrintProduct}
+            />
+            <ReportAlertModal
+                open={!!alertProduct}
+                onClose={() => setAlertProduct(null)}
+                product={alertProduct}
+            />
+            {imageProduct && (
+                <ProductImageModal
+                    open={!!imageProduct}
+                    onClose={() => setImageProduct(null)}
+                    product={imageProduct}
+                />
+            )}
         </>
     );
 }

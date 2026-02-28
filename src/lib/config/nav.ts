@@ -16,8 +16,8 @@ import {
     FileText,
     Image as ImageIcon,
     AlertTriangle,
-    Brain, // Added Brain
-    Table, // Added Table
+    Brain,
+    Printer,
     type LucideIcon,
 } from "lucide-react";
 export type UserRole = "admin" | "manager" | "auditor" | "employee";
@@ -79,6 +79,11 @@ export const NAV_GROUPS: NavGroup[] = [
                 icon: Bot,
             },
             {
+                title: "Impresión A4",
+                href: "/dashboard/print-center",
+                icon: Printer,
+            },
+            {
                 title: "Alertas",
                 href: "/dashboard/alerts",
                 icon: AlertTriangle,
@@ -106,12 +111,6 @@ export const NAV_GROUPS: NavGroup[] = [
                 href: "/dashboard/users",
                 icon: Users,
                 roles: ["admin", "manager"],
-            },
-            {
-                title: "Documentación",
-                href: "/dashboard/docs",
-                icon: FileText,
-                roles: ["admin"],
             },
             {
                 title: "Configuración",

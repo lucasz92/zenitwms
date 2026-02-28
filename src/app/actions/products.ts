@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { products, users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 
 // ── Validation schema ────────────────────────────────────────────────────
@@ -42,9 +42,28 @@ export type ActionResult =
 // ── Helper — ensure user exists in our DB ─────────────────────────────────
 
 async function ensureUser() {
-    const { userId } = await auth();
-    if (!userId) throw new Error("No autenticado");
-    return userId;
+    const user = await currentUser();
+    if (!user) throw new Error("No autenticado");
+
+    const email = user.emailAddresses[0]?.emailAddress || `no-email-${user.id}@zenit.local`;
+    const name = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username || "Usuario";
+
+    await db.insert(users).values({
+        id: user.id,
+        email,
+        name,
+        avatarUrl: user.imageUrl,
+    }).onConflictDoUpdate({
+        target: users.id,
+        set: {
+            email,
+            name,
+            avatarUrl: user.imageUrl,
+            updatedAt: new Date(),
+        }
+    });
+
+    return user.id;
 }
 
 // ── CREATE ───────────────────────────────────────────────────────────────
@@ -173,6 +192,7 @@ export async function updateProduct(
     }
 }
 
+
 // ── DELETE ───────────────────────────────────────────────────────────────
 
 export async function deleteProduct(id: string): Promise<ActionResult> {
@@ -201,7 +221,7 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
 /**
  * Actualiza la URL de la imagen de un producto después de subirla a Supabase Storage.
  */
-export async function updateProductImage(productId: string, imageUrl: string): Promise<ActionResult> {
+export async function updateProductImage(productId: string, imageUrl: string | null): Promise<ActionResult> {
     try {
         const { userId } = await auth();
         if (!userId) throw new Error("No autenticado");
@@ -210,10 +230,51 @@ export async function updateProductImage(productId: string, imageUrl: string): P
 
         revalidatePath("/dashboard/inventory");
         revalidatePath("/dashboard/catalog");
+        revalidatePath("/dashboard");
         return { ok: true };
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Error desconocido";
         console.error("[updateProductImage]", msg);
         return { ok: false, error: "Error al vincular la imagen al producto" };
+    }
+}
+
+// ── PRINTING SEARCH ─────────────────────────────────────────────────────────
+
+export async function searchProductsForPrint(term: string) {
+    try {
+        await ensureUser();
+        if (!term.trim()) return [];
+
+        const searchTerm = `%${term.trim()}%`;
+
+        // Búsqueda aproximada asumiendo PostgreSQL ILIKE
+        const results = await db.query.products.findMany({
+            where: or(
+                ilike(products.code, searchTerm),
+                ilike(products.name, searchTerm),
+                ilike(products.sinonimo, searchTerm)
+            ),
+            limit: 5,
+        });
+
+        return results.map(r => ({
+            id: r.id,
+            codigo: r.code,
+            nombre: r.name,
+            sinonimo: r.sinonimo,
+            unidad_medida: r.unitType,
+            cantidad: r.stock,
+            ubicacion: {
+                deposito: r.deposito,
+                sector: r.sector,
+                estante: r.estante,
+                fila: r.fila,
+                columna: r.columna,
+            }
+        }));
+    } catch (err: unknown) {
+        console.error("Error en búsqueda de impresión", err);
+        return [];
     }
 }

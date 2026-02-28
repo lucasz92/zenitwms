@@ -8,6 +8,7 @@ import {
     Settings,
     Users,
     ArrowLeftRight,
+    Printer,
 } from "lucide-react";
 
 export const metadata: Metadata = { title: "Menú" };
@@ -33,6 +34,12 @@ const MENU_ITEMS = [
                 icon: Bot,
                 title: "Asistente IA",
                 desc: "Consultas inteligentes sobre el depósito",
+            },
+            {
+                href: "/dashboard/print-center",
+                icon: Printer,
+                title: "Centro de Impresión",
+                desc: "Etiquetas y carteles A4 para pallets",
             },
         ],
     },

@@ -16,9 +16,15 @@ export function ProductCard({ product }: ProductCardProps) {
     const [localImageUrl, setLocalImageUrl] = useState<string | null>(product.image_url);
     const [error, setError] = useState<string | null>(null);
 
-    const supabase = createClient();
-
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        let supabase;
+        try {
+            supabase = createClient();
+        } catch (err: any) {
+            setError("Faltan las variables de entorno de Supabase en .env.local");
+            return;
+        }
+
         const file = e.target.files?.[0];
         if (!file) return;
 

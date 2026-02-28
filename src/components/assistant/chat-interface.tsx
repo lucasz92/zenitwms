@@ -1,15 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useChat } from "@ai-sdk/react";
 import { Send, Bot, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-interface Message {
-    id: string;
-    role: "user" | "assistant";
-    content: string;
-}
 
 const SUGGESTIONS = [
     "¿Qué productos tienen bajo stock?",
@@ -18,17 +13,18 @@ const SUGGESTIONS = [
 ];
 
 export function ChatInterface() {
-    const [messages, setMessages] = useState<Message[]>([]);
+    const { messages, status, sendMessage } = useChat();
     const [input, setInput] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+    const isLoading = status !== 'ready';
+
     // Auto-scroll to bottom
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, isLoading]);
+    }, [messages, status]);
 
     // Auto-resize textarea
     useEffect(() => {
@@ -43,38 +39,8 @@ export function ChatInterface() {
         const text = providedText || input;
         if (!text.trim() || isLoading) return;
 
-        // Add user message
-        const userMsg: Message = { id: Date.now().toString(), role: "user", content: text.trim() };
-        setMessages((prev) => [...prev, userMsg]);
-        setInput("");
-        setIsLoading(true);
-
-        try {
-            // Llama a la API (Mock)
-            const response = await fetch("/api/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ messages: [...messages, userMsg] }),
-            });
-
-            if (!response.ok) throw new Error("Error en el servidor");
-
-            const data = await response.json();
-
-            // Add assistant response
-            setMessages((prev) => [
-                ...prev,
-                { id: (Date.now() + 1).toString(), role: "assistant", content: data.content },
-            ]);
-        } catch (error) {
-            setMessages((prev) => [
-                ...prev,
-                { id: "error", role: "assistant", content: "Lo siento, hubo un error de conexión. Intenta de nuevo más tarde." },
-            ]);
-        } finally {
-            setIsLoading(false);
-            textareaRef.current?.focus();
-        }
+        sendMessage({ text: text.trim() });
+        if (!providedText) setInput("");
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -154,7 +120,9 @@ export function ChatInterface() {
                                             : "bg-muted/50 border rounded-2xl rounded-tl-sm text-foreground whitespace-pre-wrap"
                                     )}
                                 >
-                                    {message.content}
+                                    {(message as any).parts?.map((part: any, i: number) => (
+                                        part.type === 'text' ? <div key={i}>{part.text}</div> : null
+                                    )) || (message as any).content}
                                 </div>
                                 {message.role === "user" && (
                                     <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-sm mt-0.5">
