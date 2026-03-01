@@ -10,7 +10,10 @@ import {
     Trash2,
     UploadCloud,
     Search,
-    Loader2
+    Loader2,
+    Printer,
+    Edit3,
+    Save
 } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
@@ -33,7 +36,8 @@ import { cn } from "@/lib/utils";
 import {
     createKnowledgeDocument,
     deleteKnowledgeDocument,
-    saveDocumentNote
+    saveDocumentNote,
+    updateKnowledgeDocument
 } from "@/app/actions/knowledge";
 import type { KnowledgeDocument, DocumentNote } from "@/lib/db/schema";
 
@@ -236,18 +240,30 @@ export function DocsView({ documents }: { documents: KnowledgeWithNotes[] }) {
                 doc={selectedDoc}
                 open={!!selectedDoc}
                 onClose={() => setSelectedDoc(null)}
+                onUpdate={(newDoc) => {
+                    const mappedDoc: KnowledgeWithNotes = { ...newDoc, notes: selectedDoc?.notes || [] };
+                    setSelectedDoc(mappedDoc);
+                    // Opcionalmente actualizar el array en memoria si lo deseamos, pero `docs` vienen del backend.
+                }}
             />
         </div>
     );
 }
 
-function DocumentViewerModal({ doc, open, onClose }: { doc: KnowledgeWithNotes | null, open: boolean, onClose: () => void }) {
+function DocumentViewerModal({ doc, open, onClose, onUpdate }: { doc: KnowledgeWithNotes | null, open: boolean, onClose: () => void, onUpdate?: (doc: KnowledgeDocument) => void }) {
     const [note, setNote] = useState("");
     const [isSaving, setIsSaving] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editTitle, setEditTitle] = useState("");
+    const [editContent, setEditContent] = useState("");
+    const [isSavingDoc, setIsSavingDoc] = useState(false);
 
     useEffect(() => {
         if (doc) {
             setNote(doc.notes[0]?.notes || "");
+            setEditTitle(doc.title);
+            setEditContent(doc.content);
+            setIsEditing(false); // reset on doc change
         }
     }, [doc]);
 
@@ -261,28 +277,91 @@ function DocumentViewerModal({ doc, open, onClose }: { doc: KnowledgeWithNotes |
         setIsSaving(false);
     };
 
+    const handleSaveDoc = async () => {
+        setIsSavingDoc(true);
+        const res = await updateKnowledgeDocument(doc.id, { title: editTitle, content: editContent });
+        if (res.success) {
+            toast.success("Documento actualizado.");
+            setIsEditing(false);
+            if (onUpdate) {
+                // Notifica al padre los datos nuevos
+                onUpdate({ ...doc, title: editTitle, content: editContent } as KnowledgeDocument);
+            }
+        } else {
+            toast.error("Error al actualizar");
+        }
+        setIsSavingDoc(false);
+    };
+
+    const handlePrint = () => {
+        window.print();
+    };
+
     return (
-        <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-            <DialogContent className="max-w-5xl h-[85vh] p-0 flex flex-col md:flex-row overflow-hidden gap-0 bg-background">
+        <Dialog open={open} onOpenChange={(val) => {
+            if (!val) {
+                setIsEditing(false);
+                onClose();
+            }
+        }}>
+            <DialogContent className="max-w-7xl w-[95vw] h-[90vh] p-0 flex flex-col md:flex-row overflow-hidden gap-0 bg-background print:max-w-full print:w-full print:border-none print:shadow-none print:h-auto">
+                <DialogTitle className="sr-only">{doc.title}</DialogTitle>
+
                 {/* Lector Principal */}
-                <div className="flex-1 flex flex-col min-w-0 border-r">
-                    <div className="p-4 border-b bg-muted/10 shrink-0 flex items-center justify-between">
-                        <div className="font-bold flex items-center gap-2">
-                            <FileText className="h-5 w-5 text-blue-600" />
-                            {doc.title}
+                <div className="flex-1 flex flex-col min-w-0 md:border-r overflow-hidden print:w-full">
+                    <div className="p-4 border-b bg-muted/10 shrink-0 flex items-center justify-between print:hidden">
+                        <div className="font-bold flex items-center gap-2 flex-1 mr-4">
+                            <FileText className="h-5 w-5 text-blue-600 shrink-0" />
+                            {isEditing ? (
+                                <Input
+                                    value={editTitle}
+                                    onChange={(e) => setEditTitle(e.target.value)}
+                                    className="h-8 md:w-80"
+                                />
+                            ) : (
+                                <span className="truncate" title={doc.title}>{doc.title}</span>
+                            )}
+                        </div>
+                        <div className="flex gap-2 shrink-0">
+                            {isEditing ? (
+                                <Button size="sm" onClick={handleSaveDoc} disabled={isSavingDoc}>
+                                    {isSavingDoc ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                                    Guardar
+                                </Button>
+                            ) : (
+                                <div className="flex gap-1">
+                                    <Button variant="ghost" size="icon" title="Editar Documento" onClick={() => setIsEditing(true)}>
+                                        <Edit3 className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" title="Imprimir Documento" onClick={handlePrint}>
+                                        <Printer className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <ScrollArea className="flex-1">
-                        <div className="p-8 prose dark:prose-invert max-w-none prose-sm sm:prose-base prose-pre:bg-muted prose-pre:text-foreground">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {doc.content}
-                            </ReactMarkdown>
-                        </div>
+
+                    <ScrollArea className="flex-1 print:h-auto print:overflow-visible relative">
+                        {isEditing ? (
+                            <div className="p-4 h-full">
+                                <Textarea
+                                    className="w-full h-full min-h-[500px] font-mono whitespace-pre-wrap leading-relaxed border-none focus-visible:ring-0 resize-none p-4"
+                                    value={editContent}
+                                    onChange={(e) => setEditContent(e.target.value)}
+                                />
+                            </div>
+                        ) : (
+                            <div className="p-8 prose dark:prose-invert max-w-none prose-sm sm:prose-base prose-pre:bg-muted prose-pre:text-foreground print:p-0 print:prose-p:text-black">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {doc.content}
+                                </ReactMarkdown>
+                            </div>
+                        )}
                     </ScrollArea>
                 </div>
 
-                {/* Comentarios Compartidos */}
-                <div className="w-full md:w-80 flex flex-col bg-muted/10 shrink-0">
+                {/* Comentarios Compartidos - Hidden while printing */}
+                <div className="w-full md:w-80 lg:w-96 flex flex-col bg-muted/10 shrink-0 print:hidden border-t md:border-t-0">
                     <div className="p-4 border-b text-sm font-bold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
                         <MessageSquare className="h-4 w-4" /> Comentarios
                     </div>

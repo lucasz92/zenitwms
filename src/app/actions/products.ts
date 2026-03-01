@@ -239,6 +239,61 @@ export async function updateProductImage(productId: string, imageUrl: string | n
     }
 }
 
+const LocationSchema = z.object({
+    deposito: z.string().optional().nullable(),
+    sector: z.string().optional().nullable(),
+    fila: z.string().optional().nullable(),
+    columna: z.string().optional().nullable(),
+    estante: z.string().optional().nullable(),
+    posicion: z.string().optional().nullable(),
+});
+
+export async function updateProductLocation(productId: string, formData: Record<string, unknown>): Promise<ActionResult> {
+    try {
+        await ensureUser();
+        const parsed = LocationSchema.safeParse(formData);
+
+        if (!parsed.success) {
+            return {
+                ok: false,
+                error: parsed.error.issues[0]?.message ?? "Datos inválidos",
+            };
+        }
+
+        const data = parsed.data;
+
+        const ubicDisplay = [
+            data.deposito,
+            data.sector ? `${data.sector}-` : "",
+            data.fila, data.columna, data.estante,
+            data.posicion ? `-${data.posicion}` : ""
+        ].filter(Boolean).join("").trim();
+
+        await db
+            .update(products)
+            .set({
+                deposito: data.deposito ?? "DEP01",
+                sector: data.sector ?? null,
+                fila: data.fila ?? null,
+                columna: data.columna ?? null,
+                estante: data.estante ?? null,
+                posicion: data.posicion ?? null,
+                ubicacionDisplay: ubicDisplay || null,
+                updatedAt: new Date(),
+            })
+            .where(eq(products.id, productId));
+
+        revalidatePath("/dashboard/inventory");
+        revalidatePath("/dashboard/catalog");
+        revalidatePath("/dashboard");
+        return { ok: true };
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Error desconocido";
+        console.error("[updateProductLocation]", msg);
+        return { ok: false, error: "Error al actualizar ubicación" };
+    }
+}
+
 // ── PRINTING SEARCH ─────────────────────────────────────────────────────────
 
 export async function searchProductsForPrint(term: string) {

@@ -10,6 +10,17 @@ export async function POST(req: Request) {
     try {
         const { messages } = await req.json();
 
+        const coreMessages = messages.map((m: any) => {
+            let contentStr = m.content || "";
+            if (!contentStr && m.parts && Array.isArray(m.parts)) {
+                contentStr = m.parts.map((p: any) => p.text || "").join("");
+            }
+            return {
+                role: m.role,
+                content: contentStr,
+            };
+        });
+
         // 1. Obtener contexto de la base de conocimientos (RAG Simple)
         const docs = await db.query.knowledgeDocuments.findMany({
             where: eq(knowledgeDocuments.isActive, true),
@@ -36,7 +47,7 @@ INSTRUCCIONES:
         const result = streamText({
             model: google("gemini-1.5-flash"),
             system: systemPrompt,
-            messages,
+            messages: coreMessages,
         });
 
         return result.toUIMessageStreamResponse();

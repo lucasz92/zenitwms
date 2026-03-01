@@ -144,7 +144,37 @@ export function PrintCenter() {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-background overflow-hidden relative">
+        <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-background overflow-hidden relative print:block print:h-auto print:overflow-visible print:bg-white print:m-0 print:p-0">
+            {/* Global Print Reset: This is the magic sauce to allow multi-page printing in a Dashboard Layout */}
+            <style>{`
+                @media print {
+                    @page { 
+                        size: ${activeTab === 'labels' ? 'A4 portrait' : 'A4 landscape'}; 
+                        margin: 0; 
+                    }
+                    /* Remove height and overflow constraints from all ancestors */
+                    html, body, #__next, main, div, .h-screen, .overflow-hidden, .flex, .flex-col, .h-full {
+                        height: auto !important;
+                        min-height: auto !important;
+                        max-height: none !important;
+                        overflow: visible !important;
+                        position: static !important;
+                        display: block !important;
+                    }
+                    /* Hide known dashboard elements that shouldn't print */
+                    nav, aside, header, [role="navigation"], .no-print {
+                        display: none !important;
+                    }
+                    body {
+                        background: white !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                        margin: 0;
+                        padding: 0;
+                    }
+                }
+            `}</style>
+
             {/* NO-PRINT Toolbar */}
             <div className="bg-card border-b border-border p-6 print:hidden shrink-0 flex flex-col gap-6 z-10 w-full relative">
                 <div>
@@ -267,7 +297,7 @@ export function PrintCenter() {
             </div>
 
             {/* PREVIEW AREA (Also Print Area) */}
-            <div className="flex-1 bg-muted/30 p-8 overflow-y-auto flex justify-center print:p-0 print:bg-white print:overflow-visible relative -z-0">
+            <div className="flex-1 bg-muted/30 p-8 overflow-y-auto flex justify-center print:block print:p-0 print:m-0 print:bg-white print:overflow-visible relative -z-0">
 
                 {/* Visual Indicator for Sheet Mode */}
                 {isSheetMode && (
@@ -280,9 +310,9 @@ export function PrintCenter() {
                 {activeTab === 'labels' && (
                     <>
                         {(selectedProduct || isSheetMode) ? (
-                            <div className="flex justify-center w-full min-h-[500px]">
+                            <div className="flex justify-center w-full min-h-[500px] print:block print:w-auto print:min-h-0">
                                 <div
-                                    className={`bg-white text-black shadow-2xl print:shadow-none min-h-[297mm] grid content-start gap-x-[0mm] gap-y-[0mm] print:portrait relative print:fixed print-label-container print:m-0 
+                                    className={`bg-white text-black shadow-2xl print:shadow-none min-h-[297mm] grid content-start gap-x-[0mm] gap-y-[0mm] relative mx-auto print:mx-0
                                     ${labelWidth < 140 ? 'grid-cols-1' : 'grid-cols-2'}`}
                                     style={{
                                         width: `${labelWidth}mm`,
@@ -291,12 +321,11 @@ export function PrintCenter() {
                                         paddingRight: `0mm`
                                     }}
                                 >
-                                    <style>{`@media print { @page { size: portrait; margin: 0; } body * { visibility: hidden; } .print-label-container, .print-label-container * { visibility: visible; } .print-label-container { position: absolute !important; left: 0 !important; top: 0 !important; right: auto !important; bottom: auto !important; width: ${labelWidth}mm !important; } }`}</style>
 
                                     {itemsToRender.map((item, i) => (
-                                        <div key={i} className="h-[29.7mm] border border-dashed border-slate-300 flex flex-col p-[2mm] pt-[1mm] overflow-hidden relative break-inside-avoid page-break-inside-avoid">
+                                        <div key={i} className="h-[29.7mm] border border-dashed border-slate-300 flex flex-col p-[2mm] pt-[1mm] overflow-hidden relative break-inside-avoid page-break-inside-avoid print:border-transparent">
                                             {/* Cut lines helper */}
-                                            <div className="absolute inset-0 border-[0.5px] border-slate-100 print:border-transparent pointer-events-none"></div>
+                                            <div className="absolute inset-0 border-[0.5px] border-slate-100 print:border-slate-300 pointer-events-none"></div>
 
                                             {/* Top Row: Code + Qty */}
                                             <div className="flex justify-between items-start z-10 leading-none mb-0.5">
@@ -334,15 +363,10 @@ export function PrintCenter() {
                                         </div>
                                     ))}
 
-                                    {itemsToRender.length === 0 && !selectedProduct && (
-                                        <div className="col-span-2 text-center py-20 opacity-30 font-bold text-2xl">
-                                            Seleccione un producto y añádalo a la planilla
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex flex-col items-center justify-center opacity-20 select-none mt-20 h-64">
+                            <div className="flex flex-col items-center justify-center opacity-20 select-none mt-20 h-64 print:hidden">
                                 <Printer size={64} className="mb-4" />
                                 <p className="font-bold text-2xl">Seleccione un producto para previsualizar</p>
                             </div>
@@ -363,8 +387,7 @@ export function PrintCenter() {
                         </div>
 
                         {/* PRINT ONLY CONTAINER (Full Scale) - Visible only on Print - NO SCALING */}
-                        <div className="hidden print:block fixed top-0 left-0 w-[297mm] h-[210mm] z-[9999] bg-white p-[5mm] box-border overflow-hidden print-poster-container">
-                            <style>{`@media print { @page { size: landscape; margin: 0; } body * { visibility: hidden; } .print-poster-container, .print-poster-container * { visibility: visible; } .print-poster-container { position: absolute !important; left: 0 !important; top: 0 !important; right: auto !important; bottom: auto !important; width: 297mm !important; height: 210mm !important; } }`}</style>
+                        <div className="hidden print:block w-[297mm] h-[210mm] bg-white p-0 m-0 box-border overflow-hidden">
                             {renderPosterContent()}
                         </div>
                     </>

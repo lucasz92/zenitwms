@@ -226,7 +226,7 @@ export function InventoryTable({ products }: InventoryTableProps) {
                         </div>
 
                         <DropdownMenu>
-                            <DropdownMenuTrigger>
+                            <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
                                     <Download className="h-3.5 w-3.5" />
                                     Exportar
@@ -382,7 +382,7 @@ export function InventoryTable({ products }: InventoryTableProps) {
                                             </TableCell>
                                             <TableCell className="py-2.5 pr-3 dropdown-trigger-area">
                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger>
+                                                    <DropdownMenuTrigger asChild>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"

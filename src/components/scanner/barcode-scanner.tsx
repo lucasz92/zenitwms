@@ -9,14 +9,39 @@ import {
     AlertCircle,
     Loader2,
     RefreshCw,
+    MapPin,
+    Box,
+    Camera,
+    UploadCloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
+import { updateProductImage, updateProductLocation } from "@/app/actions/products";
 
 type ScanResult =
     | { state: "idle" }
     | { state: "scanning" }
-    | { state: "success"; code: string; product: { name: string; stock: number; location: string | null } }
+    | {
+        state: "success";
+        code: string;
+        product: {
+            id: string;
+            name: string;
+            stock: number;
+            location: string | null;
+            imageUrl: string | null;
+            deposito: string | null;
+            sector: string | null;
+            fila: string | null;
+            columna: string | null;
+            estante: string | null;
+            posicion: string | null;
+        }
+    }
     | { state: "not_found"; code: string }
     | { state: "error"; message: string };
 
@@ -39,6 +64,22 @@ export function BarcodeScanner() {
     const [result, setResult] = useState<ScanResult>({ state: "idle" });
     const [manualCode, setManualCode] = useState("");
     const [showManual, setShowManual] = useState(false);
+
+    // Image Upload State
+    const [imgLoading, setImgLoading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Location Edit State
+    const [showLocationEdit, setShowLocationEdit] = useState(false);
+    const [locLoading, setLocLoading] = useState(false);
+    const [locData, setLocData] = useState({
+        deposito: "",
+        sector: "",
+        fila: "",
+        columna: "",
+        estante: "",
+        posicion: "",
+    });
 
     const stopCamera = useCallback(() => {
         cancelAnimationFrame(animFrameRef.current);
@@ -132,6 +173,15 @@ export function BarcodeScanner() {
             if (res.ok) {
                 const product = await res.json();
                 setResult({ state: "success", code, product });
+                setLocData({
+                    deposito: product.deposito || "DEP01",
+                    sector: product.sector || "",
+                    fila: product.fila || "",
+                    columna: product.columna || "",
+                    estante: product.estante || "",
+                    posicion: product.posicion || "",
+                });
+                setShowLocationEdit(false);
             } else if (res.status === 404) {
                 setResult({ state: "not_found", code });
             } else {
@@ -158,8 +208,97 @@ export function BarcodeScanner() {
     const reset = () => {
         setResult({ state: "idle" });
         setManualCode("");
+        setShowLocationEdit(false);
         startCamera();
     };
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (result.state !== "success") return;
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast.error("Por favor selecciona un archivo de imagen válido.");
+            return;
+        }
+
+        try {
+            setImgLoading(true);
+            const supabase = createClient();
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${result.product.id}-${Date.now()}.${fileExt}`;
+            const filePath = `product-images/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('products')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data } = supabase.storage
+                .from('products')
+                .getPublicUrl(filePath);
+
+            const uploadedUrl = data.publicUrl;
+            const updateRes = await updateProductImage(result.product.id, uploadedUrl);
+
+            if (!updateRes.ok) throw new Error(updateRes.error);
+
+            toast.success("Fotografía actualizada exitosamente.");
+            // Update local state to show new image
+            setResult({
+                ...result,
+                product: { ...result.product, imageUrl: uploadedUrl }
+            });
+        } catch (error) {
+            console.error(error);
+            toast.error("Hubo un problema al subir la imagen.");
+        } finally {
+            setImgLoading(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    const handleSaveLocation = async () => {
+        if (result.state !== "success") return;
+        try {
+            setLocLoading(true);
+            const formData = {
+                deposito: locData.deposito,
+                sector: locData.sector,
+                fila: locData.fila,
+                columna: locData.columna,
+                estante: locData.estante,
+                posicion: locData.posicion,
+            };
+
+            const updateRes = await updateProductLocation(result.product.id, formData);
+            if (!updateRes.ok) throw new Error(updateRes.error);
+
+            toast.success("Ubicación guardada correctamente");
+            setShowLocationEdit(false);
+
+            // Update local state to reflect the new location
+            const ubicDisplay = [
+                formData.deposito,
+                formData.sector ? `${formData.sector}-` : "",
+                formData.fila, formData.columna, formData.estante,
+                formData.posicion ? `-${formData.posicion}` : ""
+            ].filter(Boolean).join("").trim();
+
+            setResult({
+                ...result,
+                product: { ...result.product, location: ubicDisplay || null, ...formData }
+            });
+
+        } catch (error) {
+            console.error(error);
+            toast.error("Error al guardar la ubicación");
+        } finally {
+            setLocLoading(false);
+        }
+    };
+
 
     useEffect(() => {
         startCamera();
@@ -262,28 +401,114 @@ export function BarcodeScanner() {
                 <div className="bg-background border-t border-border p-4 space-y-3">
                     {result.state === "success" && (
                         <>
-                            <div className="flex items-start gap-3">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950">
-                                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground font-mono">{result.code}</p>
-                                    <p className="font-semibold text-foreground">{result.product.name}</p>
-                                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                                        <span>Stock: <strong className="text-foreground">{result.product.stock}</strong></span>
-                                        {result.product.location && (
-                                            <span>📍 {result.product.location}</span>
-                                        )}
+                            <div className="flex items-start gap-4">
+                                {result.product.imageUrl ? (
+                                    <div className="relative h-16 w-16 shrink-0 rounded-md border border-border overflow-hidden bg-muted/50">
+                                        <img
+                                            src={result.product.imageUrl}
+                                            alt={result.product.name}
+                                            className="h-full w-full object-cover"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950">
+                                        <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                                    </div>
+                                )}
+
+                                <div className="flex-1">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-muted-foreground font-mono">{result.code}</p>
+                                        <div className="flex items-center gap-1 bg-muted px-2 py-0.5 rounded text-xs font-semibold">
+                                            <span>Stock:</span>
+                                            <span className="text-foreground">{result.product.stock}</span>
+                                        </div>
+                                    </div>
+                                    <p className="font-semibold text-foreground leading-tight mt-1">{result.product.name}</p>
+
+                                    <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground bg-muted/50 w-fit px-2 py-1 rounded border border-border/50">
+                                        <MapPin className="h-3 w-3 text-primary" />
+                                        <span>{result.product.location || "Sin ubicación"}</span>
                                     </div>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <Button variant="outline" size="sm" onClick={reset}>
-                                    <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                                    Otro escaneo
+
+                            <div className="grid grid-cols-2 gap-2 mt-4">
+                                <label className={cn(
+                                    "flex items-center justify-center gap-2 h-9 px-3 rounded-md border border-input bg-background/50 hover:bg-muted/50 transition-colors text-sm font-medium cursor-pointer",
+                                    imgLoading && "opacity-50 pointer-events-none"
+                                )}>
+                                    {imgLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                                    <span>{result.product.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}</span>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        className="hidden"
+                                        onChange={handlePhotoUpload}
+                                        disabled={imgLoading}
+                                        ref={fileInputRef}
+                                    />
+                                </label>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="bg-background/50"
+                                    onClick={() => setShowLocationEdit(!showLocationEdit)}
+                                >
+                                    <Box className="mr-2 h-4 w-4" />
+                                    Editar Ubic.
                                 </Button>
-                                <Button size="sm">
-                                    Ver producto completo
+                            </div>
+
+                            {/* Location Edit Form */}
+                            {showLocationEdit && (
+                                <div className="mt-3 p-3 bg-muted/30 rounded-lg border border-border/50 space-y-3 animate-in slide-in-from-top-2">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <Label className="text-[10px] uppercase text-muted-foreground">Depósito</Label>
+                                            <Input
+                                                value={locData.deposito}
+                                                onChange={e => setLocData({ ...locData, deposito: e.target.value.toUpperCase() })}
+                                                placeholder="DEP01"
+                                                className="h-8 text-xs font-mono uppercase"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-[10px] uppercase text-muted-foreground">Sector</Label>
+                                            <Input
+                                                value={locData.sector}
+                                                onChange={e => setLocData({ ...locData, sector: e.target.value.toUpperCase() })}
+                                                className="h-8 text-xs font-mono uppercase"
+                                            />
+                                        </div>
+                                        {['fila', 'columna', 'estante', 'posicion'].map(field => (
+                                            <div key={field} className="space-y-1">
+                                                <Label className="text-[10px] uppercase text-muted-foreground">{field}</Label>
+                                                <Input
+                                                    value={locData[field as keyof typeof locData]}
+                                                    onChange={e => setLocData({ ...locData, [field]: e.target.value.toUpperCase() })}
+                                                    className="h-8 text-xs font-mono uppercase text-center"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <Button
+                                        onClick={handleSaveLocation}
+                                        disabled={locLoading}
+                                        className="w-full h-8 text-xs"
+                                    >
+                                        {locLoading ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                                        Guardar Ubicación
+                                    </Button>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 gap-2 mt-2 pt-2 border-t border-border">
+                                <Button variant="secondary" size="sm" onClick={reset}>
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    Nuevo escaneo
                                 </Button>
                             </div>
                         </>

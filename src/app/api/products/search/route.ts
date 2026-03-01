@@ -26,6 +26,13 @@ export async function GET(request: NextRequest) {
                 minStock: products.minStock,
                 unitType: products.unitType,
                 price: products.price,
+                imageUrl: products.imageUrl,
+                deposito: products.deposito,
+                sector: products.sector,
+                fila: products.fila,
+                columna: products.columna,
+                estante: products.estante,
+                posicion: products.posicion,
                 location: sql<string | null>`
           CASE
             WHEN ${locations.id} IS NOT NULL THEN
@@ -58,6 +65,13 @@ export async function GET(request: NextRequest) {
             description: product.description,
             stock: product.stock,
             location: product.location,
+            imageUrl: product.imageUrl,
+            deposito: product.deposito,
+            sector: product.sector,
+            fila: product.fila,
+            columna: product.columna,
+            estante: product.estante,
+            posicion: product.posicion,
         });
     } catch (err) {
         console.error("[API /products/search]", err);
