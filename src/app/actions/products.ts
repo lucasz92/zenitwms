@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { products, users } from "@/lib/db/schema";
+import { products, users, locations } from "@/lib/db/schema";
 import { eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 
@@ -84,15 +84,7 @@ export async function createProduct(
 
         const data = parsed.data;
 
-        // Generar código de ubicación compuesto
-        const ubicDisplay = [
-            data.deposito,
-            data.sector ? `${data.sector}-` : "",
-            data.fila, data.columna, data.estante,
-            data.posicion ? `-${data.posicion}` : ""
-        ].filter(Boolean).join("").trim();
-
-        await db.insert(products).values({
+        const [newProduct] = await db.insert(products).values({
             code: data.code,
             name: data.name,
             description: data.description ?? null,
@@ -104,16 +96,22 @@ export async function createProduct(
             sinonimo: data.sinonimo ?? null,
             proveedor: data.proveedor ?? null,
             observacion: data.observacion ?? null,
-            deposito: data.deposito ?? "DEP01",
-            sector: data.sector ?? null,
-            fila: data.fila ?? null,
-            columna: data.columna ?? null,
-            estante: data.estante ?? null,
-            posicion: data.posicion ?? null,
-            orientacion: data.orientacion ?? null,
-            ubicacionDisplay: ubicDisplay || null,
             createdBy: userId,
-        });
+        }).returning({ id: products.id });
+
+        if (data.deposito || data.sector || data.fila || data.columna || data.estante || data.posicion) {
+            await db.insert(locations).values({
+                productId: newProduct.id,
+                warehouse: data.deposito || "Gral",
+                sector: data.sector ?? null,
+                row: data.fila ?? null,
+                column: data.columna ?? null,
+                shelf: data.estante ?? null,
+                position: data.posicion ?? null,
+                orientation: data.orientacion ?? null,
+                isPrimary: true,
+            });
+        }
 
         revalidatePath("/dashboard/inventory");
         revalidatePath("/dashboard");
@@ -147,13 +145,6 @@ export async function updateProduct(
 
         const data = parsed.data;
 
-        const ubicDisplay = [
-            data.deposito,
-            data.sector ? `${data.sector}-` : "",
-            data.fila, data.columna, data.estante,
-            data.posicion ? `-${data.posicion}` : ""
-        ].filter(Boolean).join("").trim();
-
         await db
             .update(products)
             .set({
@@ -168,17 +159,38 @@ export async function updateProduct(
                 sinonimo: data.sinonimo ?? null,
                 proveedor: data.proveedor ?? null,
                 observacion: data.observacion ?? null,
-                deposito: data.deposito ?? "DEP01",
-                sector: data.sector ?? null,
-                fila: data.fila ?? null,
-                columna: data.columna ?? null,
-                estante: data.estante ?? null,
-                posicion: data.posicion ?? null,
-                orientacion: data.orientacion ?? null,
-                ubicacionDisplay: ubicDisplay || null,
                 updatedAt: new Date(),
             })
             .where(eq(products.id, id));
+
+        const existingPrimary = await db.query.locations.findFirst({
+            where: (locs, { eq, and }) => and(eq(locs.productId, id), eq(locs.isPrimary, true))
+        });
+
+        if (existingPrimary) {
+            await db.update(locations).set({
+                warehouse: data.deposito || "Gral",
+                sector: data.sector ?? null,
+                row: data.fila ?? null,
+                column: data.columna ?? null,
+                shelf: data.estante ?? null,
+                position: data.posicion ?? null,
+                orientation: data.orientacion ?? null,
+                updatedAt: new Date(),
+            }).where(eq(locations.id, existingPrimary.id));
+        } else if (data.deposito || data.sector || data.fila || data.columna || data.estante || data.posicion) {
+            await db.insert(locations).values({
+                productId: id,
+                warehouse: data.deposito || "Gral",
+                sector: data.sector ?? null,
+                row: data.fila ?? null,
+                column: data.columna ?? null,
+                shelf: data.estante ?? null,
+                position: data.posicion ?? null,
+                orientation: data.orientacion ?? null,
+                isPrimary: true,
+            });
+        }
 
         revalidatePath("/dashboard/inventory");
         revalidatePath("/dashboard");
@@ -262,26 +274,32 @@ export async function updateProductLocation(productId: string, formData: Record<
 
         const data = parsed.data;
 
-        const ubicDisplay = [
-            data.deposito,
-            data.sector ? `${data.sector}-` : "",
-            data.fila, data.columna, data.estante,
-            data.posicion ? `-${data.posicion}` : ""
-        ].filter(Boolean).join("").trim();
+        const existingPrimary = await db.query.locations.findFirst({
+            where: (locs, { eq, and }) => and(eq(locs.productId, productId), eq(locs.isPrimary, true))
+        });
 
-        await db
-            .update(products)
-            .set({
-                deposito: data.deposito ?? "DEP01",
+        if (existingPrimary) {
+            await db.update(locations).set({
+                warehouse: data.deposito || "Gral",
                 sector: data.sector ?? null,
-                fila: data.fila ?? null,
-                columna: data.columna ?? null,
-                estante: data.estante ?? null,
-                posicion: data.posicion ?? null,
-                ubicacionDisplay: ubicDisplay || null,
+                row: data.fila ?? null,
+                column: data.columna ?? null,
+                shelf: data.estante ?? null,
+                position: data.posicion ?? null,
                 updatedAt: new Date(),
-            })
-            .where(eq(products.id, productId));
+            }).where(eq(locations.id, existingPrimary.id));
+        } else if (data.deposito || data.sector || data.fila || data.columna || data.estante || data.posicion) {
+            await db.insert(locations).values({
+                productId: productId,
+                warehouse: data.deposito || "Gral",
+                sector: data.sector ?? null,
+                row: data.fila ?? null,
+                column: data.columna ?? null,
+                shelf: data.estante ?? null,
+                position: data.posicion ?? null,
+                isPrimary: true,
+            });
+        }
 
         revalidatePath("/dashboard/inventory");
         revalidatePath("/dashboard/catalog");
@@ -310,24 +328,30 @@ export async function searchProductsForPrint(term: string) {
                 ilike(products.name, searchTerm),
                 ilike(products.sinonimo, searchTerm)
             ),
+            with: {
+                locations: true
+            },
             limit: 5,
         });
 
-        return results.map(r => ({
-            id: r.id,
-            codigo: r.code,
-            nombre: r.name,
-            sinonimo: r.sinonimo,
-            unidad_medida: r.unitType,
-            cantidad: r.stock,
-            ubicacion: {
-                deposito: r.deposito,
-                sector: r.sector,
-                estante: r.estante,
-                fila: r.fila,
-                columna: r.columna,
-            }
-        }));
+        return results.map(r => {
+            const loc = r.locations?.find((l: any) => l.isPrimary) || r.locations?.[0] || null;
+            return {
+                id: r.id,
+                codigo: r.code,
+                nombre: r.name,
+                sinonimo: r.sinonimo,
+                unidad_medida: r.unitType,
+                cantidad: r.stock,
+                ubicacion: {
+                    deposito: loc?.warehouse ?? null,
+                    sector: loc?.sector ?? null,
+                    estante: loc?.shelf ?? null,
+                    fila: loc?.row ?? null,
+                    columna: loc?.column ?? null,
+                }
+            };
+        });
     } catch (err: unknown) {
         console.error("Error en búsqueda de impresión", err);
         return [];

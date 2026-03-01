@@ -23,30 +23,34 @@ export function DashboardShell({
     const [collapsed, setCollapsed] = useState(false);
 
     return (
-        <div className="flex h-[100dvh] overflow-hidden bg-background">
+        <div className="flex h-[100dvh] overflow-hidden bg-background print:block print:h-auto print:overflow-visible text-foreground">
             {/* Sidebar — solo visible en desktop (md+) */}
-            <div className="hidden md:flex">
+            <div className="hidden md:flex print:hidden">
                 <Sidebar userRole={userRole} collapsed={collapsed} />
             </div>
 
             {/* Main area */}
-            <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-                <Topbar
-                    collapsed={collapsed}
-                    onToggleCollapse={() => setCollapsed((v) => !v)}
-                    userName={userName}
-                    userEmail={userEmail}
-                    userRole={userRole}
-                />
+            <div className="flex flex-1 flex-col overflow-hidden min-w-0 print:overflow-visible print:block">
+                <div className="print:hidden">
+                    <Topbar
+                        collapsed={collapsed}
+                        onToggleCollapse={() => setCollapsed((v) => !v)}
+                        userName={userName}
+                        userEmail={userEmail}
+                        userRole={userRole}
+                    />
+                </div>
 
                 {/* Contenido — padding-bottom en mobile para la bottom nav */}
-                <main className="flex-1 overflow-y-auto bg-muted/20 p-4 md:p-6 pb-20 md:pb-6">
+                <main className="flex-1 overflow-y-auto bg-muted/20 p-4 md:p-6 pb-20 md:pb-6 print:overflow-visible print:p-0 print:bg-white text-black page-fade-in">
                     {children}
                 </main>
             </div>
 
             {/* Bottom nav — solo visible en mobile */}
-            <BottomNav />
+            <div className="print:hidden md:hidden">
+                <BottomNav />
+            </div>
         </div>
     );
 }

@@ -27,12 +27,12 @@ export async function GET(request: NextRequest) {
                 unitType: products.unitType,
                 price: products.price,
                 imageUrl: products.imageUrl,
-                deposito: products.deposito,
-                sector: products.sector,
-                fila: products.fila,
-                columna: products.columna,
-                estante: products.estante,
-                posicion: products.posicion,
+                deposito: locations.warehouse,
+                sector: locations.sector,
+                fila: locations.row,
+                columna: locations.column,
+                estante: locations.shelf,
+                posicion: locations.position,
                 location: sql<string | null>`
           CASE
             WHEN ${locations.id} IS NOT NULL THEN

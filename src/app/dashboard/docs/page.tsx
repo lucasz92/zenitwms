@@ -1,6 +1,7 @@
 import { getKnowledgeDocuments } from "@/app/actions/knowledge";
 import { DocsView } from "@/components/docs/docs-view";
 import { Metadata } from "next";
+import { currentUser } from "@clerk/nextjs/server";
 
 export const metadata: Metadata = {
     title: "Documentación",
@@ -9,6 +10,8 @@ export const metadata: Metadata = {
 export default async function DocsPage() {
     // Usamos el mismo action pero en la vista DocsView lo trataremos como manuales regulares
     const documents = await getKnowledgeDocuments();
+    const user = await currentUser();
+    const userRole = (user?.publicMetadata?.role as string) || "employee";
 
     return (
         <div className="space-y-4">
@@ -19,7 +22,7 @@ export default async function DocsPage() {
                 </p>
             </div>
 
-            <DocsView documents={documents} />
+            <DocsView documents={documents} userRole={userRole} />
         </div>
     );
 }

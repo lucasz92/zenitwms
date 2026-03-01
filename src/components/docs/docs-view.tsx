@@ -45,10 +45,12 @@ export type KnowledgeWithNotes = KnowledgeDocument & {
     notes: DocumentNote[];
 };
 
-export function DocsView({ documents }: { documents: KnowledgeWithNotes[] }) {
+export function DocsView({ documents, userRole = "employee" }: { documents: KnowledgeWithNotes[], userRole?: string }) {
     const [search, setSearch] = useState("");
     const [isCreating, setIsCreating] = useState(false);
     const [selectedDoc, setSelectedDoc] = useState<KnowledgeWithNotes | null>(null);
+
+    const isAdmin = userRole === "admin" || userRole === "manager";
 
     // Form states
     const [title, setTitle] = useState("");
@@ -119,28 +121,30 @@ export function DocsView({ documents }: { documents: KnowledgeWithNotes[] }) {
 
     return (
         <div className="space-y-6">
-            <div className="flex gap-3 justify-end items-center mb-6">
-                <Button
-                    onClick={() => setIsCreating(true)}
-                    variant="default"
-                >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nuevo Manual
-                </Button>
-
-                <div className="relative">
-                    <Button variant="secondary">
-                        <UploadCloud className="mr-2 h-4 w-4" />
-                        Archivo Texto / MD
+            {isAdmin && (
+                <div className="flex gap-3 justify-end items-center mb-6">
+                    <Button
+                        onClick={() => setIsCreating(true)}
+                        variant="default"
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Nuevo Manual
                     </Button>
-                    <input
-                        type="file"
-                        accept=".txt,.md,.csv,.json"
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        onChange={handleFileUpload}
-                    />
+
+                    <div className="relative">
+                        <Button variant="secondary">
+                            <UploadCloud className="mr-2 h-4 w-4" />
+                            Archivo Texto / MD
+                        </Button>
+                        <input
+                            type="file"
+                            accept=".txt,.md,.csv,.json"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            onChange={handleFileUpload}
+                        />
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div className="space-y-4">
                 <div className="relative max-w-sm">
@@ -185,16 +189,18 @@ export function DocsView({ documents }: { documents: KnowledgeWithNotes[] }) {
                                     </div>
                                 </CardContent>
 
-                                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button
-                                        variant="destructive"
-                                        size="icon"
-                                        className="h-7 w-7 rounded-full shadow-sm"
-                                        onClick={(e) => { e.stopPropagation(); handleDelete(doc.id, doc.title); }}
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                </div>
+                                {isAdmin && (
+                                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            className="h-7 w-7 rounded-full shadow-sm"
+                                            onClick={(e) => { e.stopPropagation(); handleDelete(doc.id, doc.title); }}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                )}
                             </Card>
                         ))
                     )}
@@ -240,6 +246,7 @@ export function DocsView({ documents }: { documents: KnowledgeWithNotes[] }) {
                 doc={selectedDoc}
                 open={!!selectedDoc}
                 onClose={() => setSelectedDoc(null)}
+                isAdmin={isAdmin}
                 onUpdate={(newDoc) => {
                     const mappedDoc: KnowledgeWithNotes = { ...newDoc, notes: selectedDoc?.notes || [] };
                     setSelectedDoc(mappedDoc);
@@ -250,13 +257,14 @@ export function DocsView({ documents }: { documents: KnowledgeWithNotes[] }) {
     );
 }
 
-function DocumentViewerModal({ doc, open, onClose, onUpdate }: { doc: KnowledgeWithNotes | null, open: boolean, onClose: () => void, onUpdate?: (doc: KnowledgeDocument) => void }) {
+function DocumentViewerModal({ doc, open, onClose, isAdmin, onUpdate }: { doc: KnowledgeWithNotes | null, open: boolean, onClose: () => void, isAdmin?: boolean, onUpdate?: (doc: KnowledgeDocument) => void }) {
     const [note, setNote] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState("");
     const [editContent, setEditContent] = useState("");
     const [isSavingDoc, setIsSavingDoc] = useState(false);
+    const [showComments, setShowComments] = useState(false); // Collapsible panel
 
     useEffect(() => {
         if (doc) {
@@ -304,7 +312,7 @@ function DocumentViewerModal({ doc, open, onClose, onUpdate }: { doc: KnowledgeW
                 onClose();
             }
         }}>
-            <DialogContent className="max-w-7xl w-[95vw] h-[90vh] p-0 flex flex-col md:flex-row overflow-hidden gap-0 bg-background print:max-w-full print:w-full print:border-none print:shadow-none print:h-auto">
+            <DialogContent className="max-w-[98vw] w-[98vw] xl:max-w-[1400px] h-[95vh] p-0 flex flex-col md:flex-row overflow-hidden gap-0 bg-background print:max-w-full print:w-full print:border-none print:shadow-none print:h-auto">
                 <DialogTitle className="sr-only">{doc.title}</DialogTitle>
 
                 {/* Lector Principal */}
@@ -323,17 +331,38 @@ function DocumentViewerModal({ doc, open, onClose, onUpdate }: { doc: KnowledgeW
                             )}
                         </div>
                         <div className="flex gap-2 shrink-0">
-                            {isEditing ? (
+                            {(isAdmin && isEditing) ? (
                                 <Button size="sm" onClick={handleSaveDoc} disabled={isSavingDoc}>
                                     {isSavingDoc ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                                     Guardar
                                 </Button>
                             ) : (
-                                <div className="flex gap-1">
-                                    <Button variant="ghost" size="icon" title="Editar Documento" onClick={() => setIsEditing(true)}>
-                                        <Edit3 className="h-4 w-4" />
+                                <div className="flex gap-1 items-center">
+                                    <Button
+                                        variant={showComments ? "secondary" : "ghost"}
+                                        size="sm"
+                                        title="Comentarios y Notas"
+                                        onClick={() => setShowComments(!showComments)}
+                                        className="h-8 hidden md:flex"
+                                    >
+                                        <MessageSquare className="h-4 w-4 mr-2" />
+                                        {showComments ? "Ocultar" : "Comentarios"}
                                     </Button>
-                                    <Button variant="ghost" size="icon" title="Imprimir Documento" onClick={handlePrint}>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 md:hidden"
+                                        onClick={() => setShowComments(!showComments)}
+                                    >
+                                        <MessageSquare className="h-4 w-4" />
+                                    </Button>
+
+                                    {isAdmin && (
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar Documento" onClick={() => setIsEditing(true)}>
+                                            <Edit3 className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Imprimir Documento" onClick={handlePrint}>
                                         <Printer className="h-4 w-4" />
                                     </Button>
                                 </div>
@@ -341,50 +370,54 @@ function DocumentViewerModal({ doc, open, onClose, onUpdate }: { doc: KnowledgeW
                         </div>
                     </div>
 
-                    <ScrollArea className="flex-1 print:h-auto print:overflow-visible relative">
+                    <div className="flex-1 overflow-y-auto w-full print:h-auto print:overflow-visible relative">
                         {isEditing ? (
-                            <div className="p-4 h-full">
+                            <div className="p-4 h-full flex flex-col">
                                 <Textarea
-                                    className="w-full h-full min-h-[500px] font-mono whitespace-pre-wrap leading-relaxed border-none focus-visible:ring-0 resize-none p-4"
+                                    className="flex-1 w-full min-h-[500px] font-mono whitespace-pre-wrap leading-relaxed border focus-visible:ring-blue-500 rounded-lg p-4 resize-none"
                                     value={editContent}
                                     onChange={(e) => setEditContent(e.target.value)}
+                                    placeholder="Redacta en formato Markdown..."
                                 />
                             </div>
                         ) : (
-                            <div className="p-8 prose dark:prose-invert max-w-none prose-sm sm:prose-base prose-pre:bg-muted prose-pre:text-foreground print:p-0 print:prose-p:text-black">
+                            <div className="p-4 sm:p-6 lg:p-10 prose dark:prose-invert max-w-4xl mx-auto prose-sm sm:prose-base prose-pre:bg-muted prose-pre:text-foreground print:p-0 print:prose-p:text-black">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                     {doc.content}
                                 </ReactMarkdown>
                             </div>
                         )}
-                    </ScrollArea>
+                    </div>
                 </div>
 
                 {/* Comentarios Compartidos - Hidden while printing */}
-                <div className="w-full md:w-80 lg:w-96 flex flex-col bg-muted/10 shrink-0 print:hidden border-t md:border-t-0">
-                    <div className="p-4 border-b text-sm font-bold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
-                        <MessageSquare className="h-4 w-4" /> Comentarios
+                {showComments && (
+                    <div className="w-full md:w-72 lg:w-80 flex flex-col bg-muted/10 shrink-0 print:hidden border-t md:border-t-0 md:border-l relative data-[state=open]:animate-in data-[state=closed]:animate-out slide-in-from-right-1/2">
+                        <div className="p-4 border-b text-sm font-bold flex items-center justify-between text-muted-foreground uppercase tracking-wider bg-background/50">
+                            <span className="flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Comentarios</span>
+                        </div>
+                        <div className="flex-1 p-4 bg-muted/5">
+                            <Textarea
+                                className="w-full h-full resize-none bg-background shadow-inner font-mono text-sm leading-relaxed border-border hover:border-border/80 focus-visible:ring-blue-500/50"
+                                placeholder={isAdmin ? "Anotaciones referidas a este archivo..." : "No tienes permisos para editar pero puedes dejar anotaciones locales temporalmente."}
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                                disabled={!isAdmin}
+                            />
+                        </div>
+                        <div className="p-4 border-t bg-background shrink-0">
+                            <Button
+                                className="w-full font-bold shadow-sm"
+                                variant="secondary"
+                                onClick={handleSaveNote}
+                                disabled={isSaving || !isAdmin}
+                            >
+                                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                Actualizar Comentarios
+                            </Button>
+                        </div>
                     </div>
-                    <div className="flex-1 p-4">
-                        <Textarea
-                            className="w-full h-full resize-none bg-background shadow-inner font-mono text-sm leading-relaxed border-muted/50 focus-visible:ring-blue-500/50"
-                            placeholder="Anotaciones referidas a este archivo..."
-                            value={note}
-                            onChange={(e) => setNote(e.target.value)}
-                        />
-                    </div>
-                    <div className="p-4 border-t bg-background shrink-0">
-                        <Button
-                            className="w-full font-bold shadow-sm"
-                            variant="secondary"
-                            onClick={handleSaveNote}
-                            disabled={isSaving}
-                        >
-                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                            Actualizar Comentarios
-                        </Button>
-                    </div>
-                </div>
+                )}
             </DialogContent>
         </Dialog>
     );

@@ -98,7 +98,6 @@ export const NAV_GROUPS: NavGroup[] = [
                 title: "Documentación",
                 href: "/dashboard/docs",
                 icon: FileText,
-                roles: ["admin", "manager"],
             },
             {
                 title: "Cerebro IA",

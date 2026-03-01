@@ -1,0 +1,55 @@
+
+> zenit-wms@0.1.0 db:migrate
+> drizzle-kit migrate
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file 'C:\buscadormtfweb\zenit-wms\drizzle.config.ts'
+[dotenv@17.3.1] injecting env (14) from .env.local -- tip: ΓÜÖ∩╕Å  specify custom .env file path with { path: '/custom/path/.env' }
+Using 'postgres' driver for database querying
+[Γú╖] applying migrations...[2K[1G[Γú»] applying migrations...[2K[1G[Γúƒ] applying migrations...[2K[1G[Γí┐] applying migrations...[2K[1G[Γó┐] applying migrations...[2K[1G[Γú╗] applying migrations...[2K[1G[Γú╜] applying migrations...[2K[1G[Γú╖] applying migrations...{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P06',
+  message: 'schema "drizzle" already exists, skipping',
+  file: 'schemacmds.c',
+  line: '132',
+  routine: 'CreateSchemaCommand'
+}
+[2K[1G[Γú»] applying migrations...[2K[1G[Γúƒ] applying migrations...{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "__drizzle_migrations" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+DrizzleQueryError: Failed query: CREATE TYPE "public"."alert_priority" AS ENUM('low', 'medium', 'high', 'critical');
+params: 
+    at PostgresJsPreparedQuery.queryWithCache (C:\buscadormtfweb\zenit-wms\node_modules\src\pg-core\session.ts:73:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async <anonymous> (C:\buscadormtfweb\zenit-wms\node_modules\src\pg-core\dialect.ts:102:7)
+    at async scope (file:///C:/buscadormtfweb/zenit-wms/node_modules/postgres/src/index.js:260:18)
+    at async Function.begin (file:///C:/buscadormtfweb/zenit-wms/node_modules/postgres/src/index.js:243:14)
+    at async PgDialect.migrate (C:\buscadormtfweb\zenit-wms\node_modules\src\pg-core\dialect.ts:95:3)
+    at async migrate (C:\buscadormtfweb\zenit-wms\node_modules\src\postgres-js\migrator.ts:10:2) {
+  query: `CREATE TYPE "public"."alert_priority" AS ENUM('low', 'medium', 'high', 'critical');`,
+  params: [],
+  cause: PostgresError: type "alert_priority" already exists
+      at ErrorResponse (file:///C:/buscadormtfweb/zenit-wms/node_modules/postgres/src/connection.js:815:30)
+      at handle (file:///C:/buscadormtfweb/zenit-wms/node_modules/postgres/src/connection.js:489:6)
+      at Socket.data (file:///C:/buscadormtfweb/zenit-wms/node_modules/postgres/src/connection.js:324:9)
+      at Socket.emit (node:events:518:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+      at Readable.push (node:internal/streams/readable:392:5)
+      at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+    severity_local: 'ERROR',
+    severity: 'ERROR',
+    code: '42710',
+    file: 'typecmds.c',
+    line: '1177',
+    routine: 'DefineEnum'
+  }
+}
+[2K[1G[Γí┐] applying migrations...[2K[1G[Γó┐] applying migrations...[2K[1G[Γú╗] applying migrations...[2K[1G[Γú╜] applying migrations...[2K[1G[Γú╖] applying migrations...

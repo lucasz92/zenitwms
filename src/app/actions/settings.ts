@@ -43,10 +43,11 @@ export async function exportFullDatabase() {
     }
 }
 
-export async function importBulkProducts(data: any[]) {
+export async function importBulkProducts(data: any[], duplicateAction: 'update' | 'skip' = 'update') {
     try {
         let insertedCount = 0;
         let updatedCount = 0;
+        let skippedCount = 0;
 
         await db.transaction(async (tx) => {
             for (const row of data) {
@@ -64,12 +65,25 @@ export async function importBulkProducts(data: any[]) {
                 // @ts-ignore Permitimos este casteo para el ENUM de unitType
                 const unitType: any = ["un", "caja", "kg", "lt", "pallet"].includes(unitTypeString) ? unitTypeString : "un";
 
+                const deposit = String(row.deposito || row.DEPOSITO || "").trim();
+                const sector = String(row.sector || row.SECTOR || "").trim();
+                const fila = String(row.fila || row.FILA || "").trim();
+                const columna = String(row.columna || row.COLUMNA || "").trim();
+                const estante = String(row.estante || row.ESTANTE || "").trim();
+                const posicion = String(row.posicion || row.POSICION || "").trim();
+                const orientacion = String(row.orientacion || row.ORIENTACION || "").trim();
+
                 // Buscamos si existe
                 const existingProduct = await tx.query.products.findFirst({
                     where: eq(products.code, code)
                 });
 
                 if (existingProduct) {
+                    if (duplicateAction === 'skip') {
+                        skippedCount++;
+                        continue;
+                    }
+
                     // Solo actualizamos Stock y Metadata si se requiere, pero por seguridad, 
                     // la importación masiva suele hacer "upsert" del stock.
                     await tx.update(products).set({
@@ -80,6 +94,38 @@ export async function importBulkProducts(data: any[]) {
                         unitType,
                         updatedAt: new Date()
                     }).where(eq(products.id, existingProduct.id));
+
+                    // If they provided location info, update the primary location
+                    if (deposit || sector || fila || columna || estante) {
+                        const existingPrimary = await tx.query.locations.findFirst({
+                            where: (locs, { eq, and }) => and(eq(locs.productId, existingProduct.id), eq(locs.isPrimary, true))
+                        });
+
+                        if (existingPrimary) {
+                            await tx.update(locations).set({
+                                warehouse: deposit || "Gral",
+                                sector: sector || null,
+                                row: fila || null,
+                                column: columna || null,
+                                shelf: estante || null,
+                                position: posicion || null,
+                                orientation: orientacion || null,
+                                updatedAt: new Date(),
+                            }).where(eq(locations.id, existingPrimary.id));
+                        } else {
+                            await tx.insert(locations).values({
+                                productId: existingProduct.id,
+                                warehouse: deposit || "Gral",
+                                sector: sector || null,
+                                row: fila || null,
+                                column: columna || null,
+                                shelf: estante || null,
+                                position: posicion || null,
+                                orientation: orientacion || null,
+                                isPrimary: true,
+                            });
+                        }
+                    }
                     updatedCount++;
                 } else {
                     // Lo creamos
@@ -92,19 +138,17 @@ export async function importBulkProducts(data: any[]) {
                         unitType,
                     }).returning({ id: products.id });
 
-                    // Si mandó ubicación, la creamos
-                    const deposit = String(row.deposito || row.DEPOSITO || "");
-                    const sector = String(row.sector || row.SECTOR || "");
-                    if (deposit || sector) {
+                    // Si mandó ubicación, la creamos en la tabla relacional "locations" nueva
+                    if (deposit || sector || fila || columna) {
                         await tx.insert(locations).values({
                             productId: newProduct.id,
                             warehouse: deposit || "Gral",
                             sector: sector || null,
-                            row: String(row.fila || row.FILA || "") || null,
-                            column: String(row.columna || row.COLUMNA || "") || null,
-                            shelf: String(row.estante || row.ESTANTE || "") || null,
-                            position: String(row.posicion || row.POSICION || "") || null,
-                            orientation: String(row.orientacion || row.ORIENTACION || "") || null,
+                            row: fila || null,
+                            column: columna || null,
+                            shelf: estante || null,
+                            position: posicion || null,
+                            orientation: orientacion || null,
                         });
                     }
                     insertedCount++;
@@ -114,7 +158,7 @@ export async function importBulkProducts(data: any[]) {
 
         revalidatePath("/dashboard/inventory");
         revalidatePath("/dashboard/locations");
-        return { success: true, inserted: insertedCount, updated: updatedCount };
+        return { success: true, inserted: insertedCount, updated: updatedCount, skipped: skippedCount };
     } catch (e: any) {
         console.error("Bulk Import:", e);
         return { success: false, error: "Fallo transaccional durante la importación. Ningún producto fue alterado." };

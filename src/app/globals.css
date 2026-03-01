@@ -165,6 +165,31 @@
   height: 100dvh;
 }
 
+/* ── Transiciones de Página y Animaciones de Entrada ───────── */
+.page-fade-in {
+  animation: page-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Curvas de tiempo elásticas (Spring-like) */
+.ease-spring {
+  transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.ease-spring-gentle {
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 /* ====================================================
    UTILIDADES DE DISEÑO — Degradados y acentos azules
    ==================================================== */

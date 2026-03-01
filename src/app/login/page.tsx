@@ -4,8 +4,64 @@ import { useState, useEffect } from "react";
 import * as Clerk from "@clerk/elements/common";
 import * as SignIn from "@clerk/elements/sign-in";
 import * as SignUp from "@clerk/elements/sign-up";
-import { Zap } from "lucide-react";
+import { Zap, Mail, Info, ExternalLink } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+
+function LoginNavbar() {
+    return (
+        <motion.nav
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="fixed top-0 left-0 right-0 z-[200] flex items-center justify-between px-8 py-6 bg-background/30 backdrop-blur-md"
+        >
+            <div className="flex items-center gap-3">
+                <div className="group relative flex h-9 w-9 items-center justify-center rounded-xl bg-[#2d2d2d] shadow-lg transition-all hover:scale-110 active:scale-95">
+                    <Zap className="h-5 w-5 text-white transition-transform group-hover:rotate-12" />
+                    <div className="absolute inset-0 rounded-xl bg-primary/20 animate-pulse blur-sm -z-10" />
+                </div>
+                <div className="flex flex-col">
+                    <span className="font-bold text-base tracking-tight text-[#2d2d2d]">Zenit WMS</span>
+                    <span className="text-[9px] font-mono tracking-[0.2em] text-[#2d2d2d]/60 uppercase">Management System</span>
+                </div>
+            </div>
+
+            <div className="flex items-center gap-8">
+                <a href="mailto:contacto@zenitwms.com" className="group relative py-1 text-[11px] font-mono font-bold uppercase tracking-[0.15em] text-[#2d2d2d]/70 hover:text-[#2d2d2d] transition-colors">
+                    <span className="flex items-center gap-2 italic"><Mail className="h-3 w-3" /> Contacto</span>
+                    <span className="absolute bottom-0 left-0 h-[1px] w-0 bg-[#2d2d2d] transition-all group-hover:w-full" />
+                </a>
+                <a href="#" className="group relative py-1 text-[11px] font-mono font-bold uppercase tracking-[0.15em] text-[#2d2d2d]/70 hover:text-[#2d2d2d] transition-colors">
+                    <span className="flex items-center gap-2 italic"><Info className="h-3 w-3" /> Información</span>
+                    <span className="absolute bottom-0 left-0 h-[1px] w-0 bg-[#2d2d2d] transition-all group-hover:w-full" />
+                </a>
+            </div>
+        </motion.nav>
+    );
+}
+
+// Discarded FloatingElements per user request "descarta las imagenes"
+function BlueprintGrid() {
+    return (
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-[0.07]">
+            <div
+                className="absolute inset-0"
+                style={{
+                    backgroundImage: `
+                        linear-gradient(#2d2d2d 1px, transparent 1px),
+                        linear-gradient(90deg, #2d2d2d 1px, transparent 1px),
+                        linear-gradient(#2d2d2d 0.5px, transparent 0.5px),
+                        linear-gradient(90deg, #2d2d2d 0.5px, transparent 0.5px)
+                    `,
+                    backgroundSize: '100px 100px, 100px 100px, 20px 20px, 20px 20px',
+                    backgroundPosition: '-1px -1px'
+                }}
+            />
+            {/* Sutil vignette */}
+            <div className="absolute inset-0 bg-radial-gradient from-transparent to-white/80" />
+        </div>
+    );
+}
 
 export default function LoginPage() {
     const [isRightPanelActive, setPanelActive] = useState(false);
@@ -22,6 +78,13 @@ export default function LoginPage() {
 
     return (
         <div className="kinetic-auth-body">
+            <LoginNavbar />
+            <BlueprintGrid />
+
+            {/* Background Grain/Texture */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+
+
             <style dangerouslySetInnerHTML={{
                 __html: `
                 .kinetic-auth-body {
@@ -30,42 +93,17 @@ export default function LoginPage() {
                     padding: 1rem;
                     position: relative;
 
-                    /* ─ Fondo base light mode ─ */
-                    background-color: #f0f4f8;
-
-                    /* ─ Grid técnica: capa fina (24px) + capa gruesa (120px) + puntos de intersección ─ */
-                    background-image:
-                        /* Puntos azules en intersecciones del grid grueso */
-                        radial-gradient(circle, rgba(65,105,225,0.30) 1px, transparent 1px),
-                        /* Líneas finas horizontales */
-                        linear-gradient(rgba(65,105,225,0.06) 1px, transparent 1px),
-                        /* Líneas finas verticales */
-                        linear-gradient(90deg, rgba(65,105,225,0.06) 1px, transparent 1px),
-                        /* Líneas gruesas horizontales (cada 5 celdas) */
-                        linear-gradient(rgba(65,105,225,0.11) 1px, transparent 1px),
-                        /* Líneas gruesas verticales */
-                        linear-gradient(90deg, rgba(65,105,225,0.11) 1px, transparent 1px);
-
-                    background-size:
-                        120px 120px,   /* puntos en intersección del grid grueso */
-                        24px 24px,     /* fine grid H */
-                        24px 24px,     /* fine grid V */
-                        120px 120px,   /* coarse grid H */
-                        120px 120px;   /* coarse grid V */
-
-                    background-position:
-                        -1px -1px,
-                        0 0,
-                        0 0,
-                        0 0,
-                        0 0;
+                      /* ─ Fondo base light mode ─ */
+                    background-color: #fbfbfb;
                 }
                 .auth-card {
-                    background-color: var(--background); border-radius: 32px;
-                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-                    position: relative; overflow: hidden; width: 900px;
-                    max-width: 100%; min-height: 600px; display: flex;
-                    border: 1px solid var(--border);
+                    background-color: #ffffff; border-radius: 40px;
+                    box-shadow:
+                        0 20px 40px -10px rgba(0, 0, 0, 0.05),
+                        0 0 1px 0 rgba(0, 0, 0, 0.1);
+                    position: relative; overflow: hidden; width: 1000px;
+                    max-width: 100%; min-height: 650px; display: flex;
+                    border: 1px solid rgba(0,0,0,0.05);
                 }
                 .form-container {
                     position: absolute; top: 0; height: 100%; transition: all 0.8s cubic-bezier(0.8, 0, 0.2, 1);

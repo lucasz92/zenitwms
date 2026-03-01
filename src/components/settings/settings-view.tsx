@@ -7,11 +7,31 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { exportFullDatabase, importBulkProducts } from "@/app/actions/settings";
 
 export function SettingsView() {
     const [isExporting, setIsExporting] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
+    const [previewData, setPreviewData] = useState<any[] | null>(null);
+    const [fileName, setFileName] = useState("");
+    const [duplicateAction, setDuplicateAction] = useState<'update' | 'skip'>('update');
 
     const handleExport = async () => {
         setIsExporting(true);
@@ -47,14 +67,7 @@ export function SettingsView() {
     const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
-        if (!confirm(`¿Estás seguro de que quieres realizar una importación masiva usando el archivo ${file.name}? Esta acción mutará o creará productos en la base de datos principal.`)) {
-            e.target.value = "";
-            return;
-        }
-
-        setIsImporting(true);
-        toast.loading("Procesando y validando Excel...", { id: "import" });
+        setFileName(file.name);
 
         try {
             const data = await file.arrayBuffer();
@@ -67,25 +80,40 @@ export function SettingsView() {
 
             if (jsonData.length === 0) {
                 toast.error("El archivo está vacío o no tiene el formato correcto.", { id: "import" });
-                setIsImporting(false);
                 return;
             }
 
-            toast.loading(`Enviando ${jsonData.length} filas al servidor...`, { id: "import" });
+            setPreviewData(jsonData);
+        } catch (error) {
+            console.error(error);
+            toast.error("Error al leer formato del archivo.", { id: "import" });
+        } finally {
+            e.target.value = ""; // reset
+        }
+    };
 
-            const res = await importBulkProducts(jsonData);
+    const handleConfirmImport = async () => {
+        if (!previewData) return;
+
+        setIsImporting(true);
+        toast.loading(`Enviando ${previewData.length} filas al servidor...`, { id: "import" });
+
+        try {
+            // Aseguramos que la info viaje limpia al Server Action (solo primitivos)
+            const cleanData = JSON.parse(JSON.stringify(previewData));
+            const res = await importBulkProducts(cleanData, duplicateAction);
 
             if (res.success) {
-                toast.success(`Importación exitosa. Creados: ${res.inserted}, Actualizados: ${res.updated}`, { id: "import", duration: 5000 });
+                toast.success(`Importación exitosa. Agregados: ${res.inserted}, Actualizados: ${res.updated || 0}, Saltados: ${res.skipped || 0}`, { id: "import", duration: 6000 });
+                setPreviewData(null);
             } else {
                 toast.error(res.error || "Falló la importación masiva.", { id: "import" });
             }
         } catch (error) {
             console.error(error);
-            toast.error("Error al leer formato del archivo.", { id: "import" });
+            toast.error("Error de conexión durante la importación.", { id: "import" });
         } finally {
             setIsImporting(false);
-            e.target.value = ""; // reset
         }
     };
 
@@ -159,6 +187,118 @@ export function SettingsView() {
                     </div>
                 </CardFooter>
             </Card>
+
+            {/* PREVIEW MODAL */}
+            <Dialog open={!!previewData} onOpenChange={(open) => {
+                if (!open && !isImporting) setPreviewData(null);
+            }}>
+                <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FileSpreadsheet className="text-purple-600 h-5 w-5" />
+                            Vista Previa de Importación
+                        </DialogTitle>
+                        <DialogDescription>
+                            Archivo: <strong>{fileName}</strong>. Se procesarán <strong>{previewData?.length} filas</strong> en total. Revisa que las primeras 5 filas se hayan interpretado correctamente antes de confirmar.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {previewData && (
+                        <div className="flex flex-col gap-4 mt-4">
+                            {/* Opciones de Duplicados */}
+                            <div className="bg-muted/50 p-4 rounded-lg border flex flex-col gap-3">
+                                <div>
+                                    <h4 className="font-semibold text-sm">¿Qué hacer con los códigos duplicados?</h4>
+                                    <p className="text-xs text-muted-foreground">Si el código ya existe en la base de datos principal:</p>
+                                </div>
+                                <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
+                                    <label className="flex items-start gap-2 cursor-pointer text-sm">
+                                        <input
+                                            type="radio"
+                                            name="duplicateAction"
+                                            value="update"
+                                            checked={duplicateAction === 'update'}
+                                            onChange={() => setDuplicateAction('update')}
+                                            className="mt-0.5 accent-purple-600"
+                                        />
+                                        <div>
+                                            <span className="font-medium text-purple-700 dark:text-purple-400">Actualizar Stock y Datos</span>
+                                            <p className="text-[10px] text-muted-foreground">Se sobreescribirán los datos y el stock con los del Excel.</p>
+                                        </div>
+                                    </label>
+                                    <label className="flex items-start gap-2 cursor-pointer text-sm">
+                                        <input
+                                            type="radio"
+                                            name="duplicateAction"
+                                            value="skip"
+                                            checked={duplicateAction === 'skip'}
+                                            onChange={() => setDuplicateAction('skip')}
+                                            className="mt-0.5"
+                                        />
+                                        <div>
+                                            <span className="font-medium">Ignorar / Saltar</span>
+                                            <p className="text-[10px] text-muted-foreground">Solo se añadirán los códigos nuevos que no existan.</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="overflow-auto border rounded-lg bg-white max-h-[40vh]">
+                                <Table>
+                                    <TableHeader className="bg-muted sticky top-0 shadow-sm z-10">
+                                        <TableRow>
+                                            <TableHead className="w-[50px]">#</TableHead>
+                                            {/* Extract headers from first row keys */}
+                                            {Object.keys(previewData[0] || {}).map((key) => (
+                                                <TableHead key={key} className="whitespace-nowrap font-bold text-xs uppercase text-slate-600">
+                                                    {key}
+                                                </TableHead>
+                                            ))}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {previewData.slice(0, 5).map((row, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+                                                {Object.keys(previewData[0] || {}).map((key, j) => (
+                                                    <TableCell key={j} className="text-xs whitespace-nowrap">
+                                                        {String(row[key] ?? "")}
+                                                    </TableCell>
+                                                ))}
+                                            </TableRow>
+                                        ))}
+                                        {previewData.length > 5 && (
+                                            <TableRow>
+                                                <TableCell colSpan={Object.keys(previewData[0] || {}).length + 1} className="text-center text-xs text-muted-foreground bg-muted/20 italic">
+                                                    (Mostrando solo una previsualización de las primeras 5 filas de un total de {previewData.length})
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter className="mt-4 shrink-0 flex gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setPreviewData(null)}
+                            disabled={isImporting}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={handleConfirmImport}
+                            disabled={isImporting}
+                            className="bg-purple-600 hover:bg-purple-700 w-48"
+                        >
+                            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                            {isImporting ? "Procesando..." : "Confirmar Importación"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
         </div>
     );

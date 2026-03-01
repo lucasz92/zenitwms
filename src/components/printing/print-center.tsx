@@ -146,34 +146,33 @@ export function PrintCenter() {
     return (
         <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-background overflow-hidden relative print:block print:h-auto print:overflow-visible print:bg-white print:m-0 print:p-0">
             {/* Global Print Reset: This is the magic sauce to allow multi-page printing in a Dashboard Layout */}
-            <style>{`
-                @media print {
-                    @page { 
-                        size: ${activeTab === 'labels' ? 'A4 portrait' : 'A4 landscape'}; 
-                        margin: 0; 
+            {activeTab === 'labels' ? (
+                <style>{`
+                    @media print {
+                        @page { size: A4 portrait; margin: 0; }
+                        /* Remove height and overflow constraints from ancestors but preserve hidden elements */
+                        html, body, main, .h-screen, .overflow-hidden, .flex, .flex-col, .h-full, .h-\\[100dvh\\] { height: auto !important; min-height: auto !important; max-height: none !important; overflow: visible !important; }
+                        /* Specifically target the NextJS root container */
+                        body > div:first-child { height: auto !important; overflow: visible !important; display: block !important; }
+                        /* Force hide layout elements using a high specificity selector */
+                        nav, aside, header, footer, [role="navigation"], .no-print, .print\\:hidden, [class*="print:hidden"] { display: none !important; }
+                        body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
                     }
-                    /* Remove height and overflow constraints from all ancestors */
-                    html, body, #__next, main, div, .h-screen, .overflow-hidden, .flex, .flex-col, .h-full {
-                        height: auto !important;
-                        min-height: auto !important;
-                        max-height: none !important;
-                        overflow: visible !important;
-                        position: static !important;
-                        display: block !important;
+                `}</style>
+            ) : (
+                <style>{`
+                    @media print {
+                        @page { size: A4 landscape; margin: 0; }
+                        /* Remove height and overflow constraints from ancestors but preserve hidden elements */
+                        html, body, main, .h-screen, .overflow-hidden, .flex, .flex-col, .h-full, .h-\\[100dvh\\] { height: auto !important; min-height: auto !important; max-height: none !important; overflow: visible !important; }
+                        /* Specifically target the NextJS root container */
+                        body > div:first-child { height: auto !important; overflow: visible !important; display: block !important; }
+                        /* Force hide layout elements using a high specificity selector */
+                        nav, aside, header, footer, [role="navigation"], .no-print, .print\\:hidden, [class*="print:hidden"] { display: none !important; }
+                        body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
                     }
-                    /* Hide known dashboard elements that shouldn't print */
-                    nav, aside, header, [role="navigation"], .no-print {
-                        display: none !important;
-                    }
-                    body {
-                        background: white !important;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                        margin: 0;
-                        padding: 0;
-                    }
-                }
-            `}</style>
+                `}</style>
+            )}
 
             {/* NO-PRINT Toolbar */}
             <div className="bg-card border-b border-border p-6 print:hidden shrink-0 flex flex-col gap-6 z-10 w-full relative">

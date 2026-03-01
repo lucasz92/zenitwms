@@ -70,15 +70,6 @@ export const products = pgTable("products", {
     sinonimo: text("sinonimo"),
     proveedor: text("proveedor"),
     observacion: text("observacion"),
-    // ─ Ubicación física en el depósito ─
-    deposito: text("deposito").default("DEP01"),
-    sector: text("sector"),
-    fila: text("fila"),
-    columna: text("columna"),
-    estante: text("estante"),
-    posicion: text("posicion"),
-    orientacion: text("orientacion"),
-    ubicacionDisplay: text("ubicacion_display"),   // código compuesto generado
     // ─ Auditoría ─
     createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
