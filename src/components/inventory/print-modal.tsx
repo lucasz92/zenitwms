@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X, Printer, Settings, AlertCircle } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ProductRow } from "@/lib/db/queries/products";
@@ -204,8 +204,8 @@ export function PrintModal({ open, onClose, product }: PrintModalProps) {
                     {/* Header */}
                     <div className="p-4 border-b border-border/40 flex justify-between items-center bg-muted/20">
                         <div>
-                            <h3 className="font-bold text-lg text-foreground">Imprimir Etiqueta</h3>
-                            <p className="text-xs text-muted-foreground">Zebra/Térmica ({activeWidth}x50mm)</p>
+                            <DialogTitle className="font-bold text-lg text-foreground">Imprimir Etiqueta</DialogTitle>
+                            <DialogDescription className="text-xs text-muted-foreground">Zebra/Térmica ({activeWidth}x50mm)</DialogDescription>
                         </div>
                         <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-8 w-8 text-muted-foreground hover:text-foreground">
                             <X className="h-4 w-4" />

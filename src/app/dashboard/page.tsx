@@ -8,44 +8,54 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { db } from "@/lib/db";
+import { products, locations, inventoryMovements, alerts } from "@/lib/db/schema";
+import { count, eq, sql } from "drizzle-orm";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
-// ── Data placeholder (se reemplazará con Supabase queries) ──
-const stats = [
-    {
-        title: "Total Productos",
-        value: "0",
-        change: "+0 este mes",
-        icon: Package,
-        color: "text-blue-500",
-        bg: "bg-blue-500/10",
-    },
-    {
-        title: "Ubicados",
-        value: "0",
-        change: "0% del total",
-        icon: MapPin,
-        color: "text-emerald-500",
-        bg: "bg-emerald-500/10",
-    },
-    {
-        title: "Movimientos Hoy",
-        value: "0",
-        change: "+0 vs. ayer",
-        icon: ArrowLeftRight,
-        color: "text-violet-500",
-        bg: "bg-violet-500/10",
-    },
-    {
-        title: "Stock Crítico",
-        value: "0",
-        change: "productos bajo mínimo",
-        icon: AlertTriangle,
-        color: "text-amber-500",
-        bg: "bg-amber-500/10",
-    },
-];
+export default async function DashboardPage() {
+    // ── Fetching real stats from DB ──
+    const [productsCount] = await db.select({ value: count() }).from(products);
+    const [locatedCount] = await db.select({ value: count() }).from(locations).where(sql`${locations.productId} IS NOT NULL`);
+    const [movementsToday] = await db.select({ value: count() }).from(inventoryMovements).where(sql`date_trunc('day', ${inventoryMovements.createdAt}) = CURRENT_DATE`);
+    const [alertsCount] = await db.select({ value: count() }).from(alerts).where(eq(alerts.status, "pending"));
 
-export default function DashboardPage() {
+    const stats = [
+        {
+            title: "Total Productos",
+            value: productsCount.value.toString(),
+            change: "En catálogo",
+            icon: Package,
+            color: "text-blue-500",
+            bg: "bg-blue-500/10",
+        },
+        {
+            title: "Ubicados",
+            value: locatedCount.value.toString(),
+            change: `${productsCount.value > 0 ? ((locatedCount.value / productsCount.value) * 100).toFixed(1) : 0}% del total`,
+            icon: MapPin,
+            color: "text-emerald-500",
+            bg: "bg-emerald-500/10",
+        },
+        {
+            title: "Movimientos Hoy",
+            value: movementsToday.value.toString(),
+            change: "Registrados hoy",
+            icon: ArrowLeftRight,
+            color: "text-violet-500",
+            bg: "bg-violet-500/10",
+        },
+        {
+            title: "Alertas Pendientes",
+            value: alertsCount.value.toString(),
+            change: "Requieren atención",
+            icon: AlertTriangle,
+            color: "text-amber-500",
+            bg: "bg-amber-500/10",
+        },
+    ];
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -54,8 +64,8 @@ export default function DashboardPage() {
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">
                         Dashboard
                     </h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                        Bienvenido de vuelta. Aquí está el resumen de tu depósito.
+                    <p className="text-sm text-muted-foreground mt-0.5 capitalize">
+                        {format(new Date(), "EEEE, d 'de' MMMM", { locale: es })}
                     </p>
                 </div>
                 <Badge
@@ -102,8 +112,8 @@ export default function DashboardPage() {
                         </div>
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
-                        <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
-                            Conecta Supabase para ver movimientos
+                        <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground bg-muted/5">
+                            {movementsToday.value > 0 ? "Movimientos registrados hoy." : "No hay movimientos recientes."}
                         </div>
                     </CardContent>
                 </Card>
@@ -113,13 +123,13 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2">
                             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                             <CardTitle className="text-sm font-semibold">
-                                Stock Crítico
+                                Alertas de Stock
                             </CardTitle>
                         </div>
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
-                        <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
-                            Conecta Supabase para ver alertas
+                        <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground bg-muted/5">
+                            {alertsCount.value > 0 ? `${alertsCount.value} alertas activas.` : "Todo bajo control. Sin alertas."}
                         </div>
                     </CardContent>
                 </Card>

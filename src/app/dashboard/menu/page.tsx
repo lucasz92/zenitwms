@@ -24,7 +24,7 @@ const MENU_ITEMS = [
                 desc: "Historial de entradas y salidas",
             },
             {
-                href: "/dashboard/reports",
+                href: "/dashboard/inventory",
                 icon: BarChart3,
                 title: "Reportes",
                 desc: "Exportar y analizar datos",
@@ -53,7 +53,7 @@ const MENU_ITEMS = [
                 desc: "Gestionar accesos y roles",
             },
             {
-                href: "/dashboard/documentation",
+                href: "/dashboard/docs",
                 icon: FileText,
                 title: "Documentación",
                 desc: "Guías y manuales del sistema",
