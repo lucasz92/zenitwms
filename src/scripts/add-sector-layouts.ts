@@ -12,7 +12,7 @@ if (!connectionString) {
 
 async function run() {
     console.log("Connecting to Database...");
-    const client = postgres(connectionString);
+    const client = postgres(connectionString!);
     const db = drizzle(client);
 
     console.log("Creating table `sector_layouts`...");
