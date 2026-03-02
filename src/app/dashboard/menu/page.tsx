@@ -1,74 +1,23 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import {
-    ArrowRight,
-    BarChart3,
-    Bot,
-    FileText,
-    Settings,
-    Users,
-    ArrowLeftRight,
-    Printer,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { NAV_GROUPS } from "@/lib/config/nav";
+import { currentUser } from "@clerk/nextjs/server";
+import type { UserRole } from "@/lib/config/nav";
 
 export const metadata: Metadata = { title: "Menú" };
 
-const MENU_ITEMS = [
-    {
-        group: "Herramientas",
-        items: [
-            {
-                href: "/dashboard/movements",
-                icon: ArrowLeftRight,
-                title: "Movimientos",
-                desc: "Historial de entradas y salidas",
-            },
-            {
-                href: "/dashboard/inventory",
-                icon: BarChart3,
-                title: "Reportes",
-                desc: "Exportar y analizar datos",
-            },
-            {
-                href: "/dashboard/assistant",
-                icon: Bot,
-                title: "Asistente IA",
-                desc: "Consultas inteligentes sobre el depósito",
-            },
-            {
-                href: "/dashboard/print-center",
-                icon: Printer,
-                title: "Centro de Impresión",
-                desc: "Etiquetas y carteles A4 para pallets",
-            },
-        ],
-    },
-    {
-        group: "Administración",
-        items: [
-            {
-                href: "/dashboard/users",
-                icon: Users,
-                title: "Usuarios",
-                desc: "Gestionar accesos y roles",
-            },
-            {
-                href: "/dashboard/docs",
-                icon: FileText,
-                title: "Documentación",
-                desc: "Guías y manuales del sistema",
-            },
-            {
-                href: "/dashboard/settings",
-                icon: Settings,
-                title: "Configuración",
-                desc: "Preferencias de la cuenta",
-            },
-        ],
-    },
-];
+export default async function MenuPage() {
+    const user = await currentUser();
+    const role = (user?.publicMetadata?.role as UserRole) ?? "employee";
 
-export default function MenuPage() {
+    const filteredGroups = NAV_GROUPS.map((group) => ({
+        ...group,
+        items: group.items.filter(
+            (item) => !item.roles || item.roles.includes(role)
+        ),
+    })).filter((group) => group.items.length > 0);
+
     return (
         <div className="space-y-6 max-w-lg mx-auto">
             <div>
@@ -78,10 +27,10 @@ export default function MenuPage() {
                 </p>
             </div>
 
-            {MENU_ITEMS.map((group) => (
-                <div key={group.group} className="space-y-1">
+            {filteredGroups.map((group) => (
+                <div key={group.label} className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 px-1 mb-2">
-                        {group.group}
+                        {group.label}
                     </p>
                     <div className="rounded-xl border border-border/60 bg-card overflow-hidden divide-y divide-border/40">
                         {group.items.map((item) => {
@@ -98,7 +47,7 @@ export default function MenuPage() {
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium">{item.title}</p>
                                         <p className="text-xs text-muted-foreground truncate">
-                                            {item.desc}
+                                            {item.description || "Ir a la sección"}
                                         </p>
                                     </div>
                                     <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />

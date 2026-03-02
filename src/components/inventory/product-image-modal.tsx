@@ -49,25 +49,22 @@ export function ProductImageModal({ open, onClose, product }: ProductImageModalP
             const objectUrl = URL.createObjectURL(file);
             setPreviewUrl(objectUrl);
 
-            // 2. Upload Logic
-            const supabase = createClient();
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${product.id}-${Date.now()}.${fileExt}`;
-            const filePath = `product-images/${fileName}`;
+            // 2. Upload Logic using secure API route
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("productId", product.id);
 
-            const { error: uploadError } = await supabase.storage
-                .from('products')
-                .upload(filePath, file);
+            const uploadRes = await fetch("/api/upload/image", {
+                method: "POST",
+                body: formData,
+            });
 
-            if (uploadError) {
-                throw uploadError;
+            if (!uploadRes.ok) {
+                const errorData = await uploadRes.json();
+                throw new Error(errorData.error || "Error al subir la imagen.");
             }
 
-            const { data } = supabase.storage
-                .from('products')
-                .getPublicUrl(filePath);
-
-            const uploadedUrl = data.publicUrl;
+            const { url: uploadedUrl } = await uploadRes.json();
 
             // Then call the server action
             const result = await updateProductImage(product.id, uploadedUrl);

@@ -224,22 +224,23 @@ export function BarcodeScanner() {
 
         try {
             setImgLoading(true);
-            const supabase = createClient();
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${result.product.id}-${Date.now()}.${fileExt}`;
-            const filePath = `product-images/${fileName}`;
 
-            const { error: uploadError } = await supabase.storage
-                .from('products')
-                .upload(filePath, file);
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("productId", result.product.id);
 
-            if (uploadError) throw uploadError;
+            const uploadRes = await fetch("/api/upload/image", {
+                method: "POST",
+                body: formData,
+            });
 
-            const { data } = supabase.storage
-                .from('products')
-                .getPublicUrl(filePath);
+            if (!uploadRes.ok) {
+                const errorData = await uploadRes.json();
+                throw new Error(errorData.error || "Error al subir la imagen.");
+            }
 
-            const uploadedUrl = data.publicUrl;
+            const { url: uploadedUrl } = await uploadRes.json();
+
             const updateRes = await updateProductImage(result.product.id, uploadedUrl);
 
             if (!updateRes.ok) throw new Error(updateRes.error);

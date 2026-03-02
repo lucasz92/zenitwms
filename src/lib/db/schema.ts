@@ -119,6 +119,16 @@ export const locations = pgTable("locations", {
 });
 
 /**
+ * sector_layouts — Custom warehouse sector arrangement (2D grid sorting indices)
+ */
+export const sectorLayouts = pgTable("sector_layouts", {
+    sectorName: text("sector_name").primaryKey(),
+    description: text("description"), // Full name/reference for the abbreviation
+    orderIndex: integer("order_index").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
  * inventory_movements — Historial de auditoría
  * Inmutable: no se actualiza, solo se inserta
  */
@@ -319,6 +329,8 @@ export type ProductVariant = typeof productVariants.$inferSelect;
 export type NewProductVariant = typeof productVariants.$inferInsert;
 export type Location = typeof locations.$inferSelect;
 export type NewLocation = typeof locations.$inferInsert;
+export type SectorLayout = typeof sectorLayouts.$inferSelect;
+export type NewSectorLayout = typeof sectorLayouts.$inferInsert;
 export type InventoryMovement = typeof inventoryMovements.$inferSelect;
 export type NewInventoryMovement = typeof inventoryMovements.$inferInsert;
 export type Alert = typeof alerts.$inferSelect;

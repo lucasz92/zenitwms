@@ -12,14 +12,15 @@ const CreateRackSchema = z.object({
     warehouse: z.string().min(1, "El depósito es requerido"),
     sector: z.string().min(1, "El sector es requerido"),
     row: z.string().min(1, "La fila/pasillo es requerida"),
-    colsStart: z.coerce.number().int().min(1),
-    colsEnd: z.coerce.number().int().min(1),
+    colsStart: z.string().min(1),
+    colsEnd: z.string().min(1),
     shelves: z.coerce.number().int().min(1).max(20, "Máximo 20 estantes de alto"),
 });
 
 /**
  * Crea las coordenadas "físicas" de una estantería entera.
  * Ej: Fila A, Columnas de la 1 a la 10, 4 estantes de alto = 40 records.
+ * Soporta rangos numéricos (1-10) y alfabéticos (A-Z).
  */
 export async function createRack(formData: Record<string, unknown>): Promise<ActionResult> {
     try {
@@ -33,23 +34,54 @@ export async function createRack(formData: Record<string, unknown>): Promise<Act
 
         const { warehouse, sector, row, colsStart, colsEnd, shelves } = parsed.data;
 
-        if (colsStart > colsEnd) {
-            return { ok: false, error: "La columna inicial no puede ser mayor a la final" };
-        }
-
-        // Generar la matriz de ubicaciones
+        const isNumericRange = !isNaN(Number(colsStart)) && !isNaN(Number(colsEnd));
         const newLocations = [];
-        for (let c = colsStart; c <= colsEnd; c++) {
-            for (let s = 1; s <= shelves; s++) {
-                // Formatear columna a 2 dígitos (ej: 01, 02)
-                const colStr = c.toString().padStart(2, "0");
-                newLocations.push({
-                    warehouse,
-                    sector,
-                    row,
-                    column: colStr,
-                    shelf: s.toString(),
-                });
+
+        if (isNumericRange) {
+            const start = parseInt(colsStart);
+            const end = parseInt(colsEnd);
+
+            if (start > end) {
+                return { ok: false, error: "La columna inicial no puede ser mayor a la final" };
+            }
+
+            for (let c = start; c <= end; c++) {
+                for (let s = 1; s <= shelves; s++) {
+                    const colStr = c.toString().padStart(2, "0");
+                    newLocations.push({
+                        warehouse,
+                        sector,
+                        row,
+                        column: colStr,
+                        shelf: s.toString(),
+                    });
+                }
+            }
+        } else {
+            // Rango alfabético (ej: A a C o AA a AB)
+            // Para simplicidad inicial, manejamos caracteres simples (A a Z)
+            if (colsStart.length === 1 && colsEnd.length === 1) {
+                const start = colsStart.toUpperCase().charCodeAt(0);
+                const end = colsEnd.toUpperCase().charCodeAt(0);
+
+                if (start > end) {
+                    return { ok: false, error: "La letra inicial no puede ser posterior a la final" };
+                }
+
+                for (let c = start; c <= end; c++) {
+                    for (let s = 1; s <= shelves; s++) {
+                        const colStr = String.fromCharCode(c).padStart(2, "0");
+                        newLocations.push({
+                            warehouse,
+                            sector,
+                            row,
+                            column: colStr,
+                            shelf: s.toString(),
+                        });
+                    }
+                }
+            } else {
+                return { ok: false, error: "Para rangos alfabéticos, ingresá solo una letra (ej: A a Z)" };
             }
         }
 

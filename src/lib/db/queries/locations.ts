@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { locations, products } from "@/lib/db/schema";
+import { locations, products, sectorLayouts } from "@/lib/db/schema";
 import { sql } from "drizzle-orm";
 
 export async function getLocations() {
@@ -44,4 +44,15 @@ export async function getLocationStats() {
     const occupancyRate = s.total > 0 ? (s.occupied / s.total) * 100 : 0;
 
     return { ...s, occupancyRate };
+}
+
+export async function getSectorsLayout() {
+    return await db
+        .select({
+            sectorName: sectorLayouts.sectorName,
+            description: sectorLayouts.description,
+            orderIndex: sectorLayouts.orderIndex,
+        })
+        .from(sectorLayouts)
+        .orderBy(sectorLayouts.orderIndex);
 }

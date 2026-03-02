@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X, Printer, Settings, AlertCircle, CopyPlus, MapPin } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -288,6 +288,7 @@ export function PrintWarningModal({ open, onClose, product }: PrintWarningModalP
     return (
         <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
             <DialogContent className="sm:max-w-3xl overflow-hidden p-0 gap-0 bg-transparent border-none shadow-none">
+                <DialogTitle className="sr-only">Etiqueta de Ubicación Doble</DialogTitle>
                 <div className="bg-card w-full flex flex-col rounded-xl overflow-hidden shadow-2xl border border-border">
                     {/* Header */}
                     <div className="p-4 border-b border-border/40 flex justify-between items-center bg-yellow-500/10 dark:bg-yellow-500/5">
