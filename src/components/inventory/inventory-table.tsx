@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useMemo, CSSProperties } from "react";
+import { useState, useMemo, CSSProperties, useCallback, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
     Plus, Search, Download, FileSpreadsheet, FileText, FileJson, ArrowUpDown,
     ChevronLeft, ChevronRight, CopyPlus, AlertCircle, Printer, FileText as FileTextIcon,
@@ -63,7 +65,7 @@ type ColumnMeta = {
     className?: string; // Passed to both TH and TD to hide on responsive views
 };
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 100;
 
 const DraggableTableHeader = ({ header }: { header: any }) => {
     const { attributes, isDragging, listeners, setNodeRef, transform } = useSortable({
@@ -135,11 +137,37 @@ const DraggableTableHeader = ({ header }: { header: any }) => {
 
 interface InventoryTableProps {
     products: ProductRow[];
+    total: number;
+    totalPages: number;
 }
 
-export function InventoryTable({ products }: InventoryTableProps) {
-    const [search, setSearch] = useState("");
-    const [statusFilter, setStatusFilter] = useState<"all" | "low" | "critical" | "out">("all");
+export function InventoryTable({ products, total, totalPages }: InventoryTableProps) {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    const [search, setSearch] = useState(searchParams.get("q") || "");
+    const [statusFilter, setStatusFilter] = useState<"all" | "low" | "critical" | "out">(searchParams.get("f") as any || "all");
+    const [page, setPage] = useState(parseInt(searchParams.get("p") || "1"));
+
+    const debouncedSearch = useDebounce(search, 500);
+
+    const updateUrl = useCallback((updates: Record<string, string | null>) => {
+        const params = new URLSearchParams(searchParams.toString());
+        Object.entries(updates).forEach(([key, value]) => {
+            if (value === null || value === "all" || (key === "p" && value === "1")) {
+                params.delete(key);
+            } else {
+                params.set(key, value);
+            }
+        });
+        router.push(`?${params.toString()}`, { scroll: false });
+    }, [router, searchParams]);
+
+    useEffect(() => {
+        if (debouncedSearch !== (searchParams.get("q") || "")) {
+            updateUrl({ q: debouncedSearch || null, p: "1" });
+        }
+    }, [debouncedSearch, updateUrl, searchParams]);
 
     // Modal state
     const [createOpen, setCreateOpen] = useState(false);
@@ -151,11 +179,18 @@ export function InventoryTable({ products }: InventoryTableProps) {
     const [alertProduct, setAlertProduct] = useState<ProductRow | null>(null);
     const [imageProduct, setImageProduct] = useState<ProductRow | null>(null);
 
-    // Apply manual status filtering outside of tanstack to respect the pill filters accurately
-    const filteredProducts = useMemo(() => {
-        if (statusFilter === "all") return products;
-        return products.filter((p) => getStockStatus(p.stock, p.min_stock) === statusFilter);
-    }, [products, statusFilter]);
+    // We use products directly since filtering is now server-side (except for some edge cases if needed)
+    const filteredProducts = products;
+
+    const handleFilterChange = (f: "all" | "low" | "critical" | "out") => {
+        setStatusFilter(f);
+        updateUrl({ f, p: "1" });
+    };
+
+    const handlePageChange = (p: number) => {
+        setPage(p);
+        updateUrl({ p: p.toString() });
+    };
 
     // TanStack Definitions
     const columns = useMemo<ColumnDef<ProductRow, any>[]>(() => [
@@ -445,7 +480,7 @@ export function InventoryTable({ products }: InventoryTableProps) {
                             {(["all", "low", "critical", "out"] as const).map((f) => (
                                 <button
                                     key={f}
-                                    onClick={() => { setStatusFilter(f); setPagination({ pageIndex: 0, pageSize: PAGE_SIZE }); }}
+                                    onClick={() => handleFilterChange(f)}
                                     className={cn(
                                         "rounded-full border px-2.5 py-0.5 text-xs font-medium transition-all whitespace-nowrap",
                                         statusFilter === f
@@ -572,20 +607,20 @@ export function InventoryTable({ products }: InventoryTableProps) {
                                             variant="ghost"
                                             size="icon"
                                             className="h-7 w-7"
-                                            onClick={() => table.previousPage()}
-                                            disabled={!table.getCanPreviousPage()}
+                                            onClick={() => handlePageChange(page - 1)}
+                                            disabled={page === 1}
                                         >
                                             <ChevronLeft className="h-3.5 w-3.5" />
                                         </Button>
                                         <span className="text-xs text-muted-foreground px-1 font-medium">
-                                            {table.getState().pagination.pageIndex + 1} / {table.getPageCount() || 1}
+                                            {page} / {totalPages || 1}
                                         </span>
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             className="h-7 w-7"
-                                            onClick={() => table.nextPage()}
-                                            disabled={!table.getCanNextPage()}
+                                            onClick={() => handlePageChange(page + 1)}
+                                            disabled={page >= totalPages}
                                         >
                                             <ChevronRight className="h-3.5 w-3.5" />
                                         </Button>

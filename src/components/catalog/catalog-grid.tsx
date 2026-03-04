@@ -10,39 +10,74 @@ interface CatalogGridProps {
     products: ProductRow[];
 }
 
-const PAGE_SIZE = 48;
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce"; // I should check if this exists or create it
 
-export function CatalogGrid({ products }: CatalogGridProps) {
-    const [search, setSearch] = useState("");
-    const [filter, setFilter] = useState<"all" | "missing" | "has_image">("all");
-    const [page, setPage] = useState(1);
+interface CatalogGridProps {
+    products: ProductRow[];
+    total: number;
+    totalPages: number;
+}
 
-    const filteredProducts = useMemo(() => {
-        return products.filter((p) => {
-            if (filter === "missing" && p.image_url) return false;
-            if (filter === "has_image" && !p.image_url) return false;
-            if (search) {
-                const q = search.toLowerCase();
-                return p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q);
+export function CatalogGrid({ products, total, totalPages }: CatalogGridProps) {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    const [search, setSearch] = useState(searchParams.get("q") || "");
+    const [filter, setFilter] = useState<"all" | "missing" | "has_image">(searchParams.get("f") as any || "all");
+
+    const pageStr = searchParams.get("p") || "1";
+    const currentPage = parseInt(pageStr);
+
+    const debouncedSearch = useDebounce(search, 500);
+
+    const updateUrl = useCallback((updates: Record<string, string | null>) => {
+        const params = new URLSearchParams(searchParams.toString());
+        Object.entries(updates).forEach(([key, value]) => {
+            if (value === null || value === "all" || (key === "p" && value === "1")) {
+                params.delete(key);
+            } else {
+                params.set(key, value);
             }
-            return true;
         });
-    }, [products, search, filter]);
+        router.push(`?${params.toString()}`, { scroll: false });
+    }, [router, searchParams]);
 
-    // Reset page when filters/search change
-    const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
-    const safePage = Math.min(page, totalPages);
-    const paginated = filteredProducts.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+    // Update URL when search or filter changes
+    useEffect(() => {
+        if (debouncedSearch !== (searchParams.get("q") || "")) {
+            updateUrl({ q: debouncedSearch || null, p: "1" });
+        }
+    }, [debouncedSearch, updateUrl, searchParams]);
 
     const handleFilterChange = (newFilter: "all" | "missing" | "has_image") => {
         setFilter(newFilter);
-        setPage(1);
+        updateUrl({ f: newFilter, p: "1" });
     };
 
     const handleSearch = (val: string) => {
         setSearch(val);
-        setPage(1);
+        // useEffect handles the URL update with debounce
     };
+
+    const handlePageChange = (newPage: number) => {
+        updateUrl({ p: newPage.toString() });
+    };
+
+    // Note: 'p.image_url' filtering is still client-side if we haven't implemented it in getProducts
+    // But for 77k, maybe we should also implement image filtering in server.
+    // For now, let's keep the client-side filter for images if it exists, 
+    // but the main search should be server-side.
+
+    // Actually, I'll keep the client-side image filtering on the already server-searched subset.
+    const displayProducts = useMemo(() => {
+        return products.filter((p) => {
+            if (filter === "missing" && p.image_url) return false;
+            if (filter === "has_image" && !p.image_url) return false;
+            return true;
+        });
+    }, [products, filter]);
 
     return (
         <div className="space-y-4">
@@ -82,7 +117,7 @@ export function CatalogGrid({ products }: CatalogGridProps) {
             </div>
 
             {/* Grid */}
-            {filteredProducts.length === 0 ? (
+            {displayProducts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-12 text-center rounded-xl border border-dashed border-border/60 bg-muted/10 mt-8">
                     <ImageIcon className="h-12 w-12 text-muted-foreground/30 mb-3" />
                     <h3 className="font-semibold text-lg">No se encontraron productos</h3>
@@ -91,42 +126,42 @@ export function CatalogGrid({ products }: CatalogGridProps) {
             ) : (
                 <>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mt-4">
-                        {paginated.map((p) => (
+                        {displayProducts.map((p) => (
                             <ProductCard key={p.id} product={p} />
                         ))}
                     </div>
 
                     {/* Pagination Controls */}
-                    <div className="flex items-center justify-between border-t pt-4 pb-20">
-                        <p className="text-xs text-muted-foreground">
-                            Mostrando{" "}
-                            <span className="font-semibold text-foreground">
-                                {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredProducts.length)}
-                            </span>{" "}
-                            de{" "}
-                            <span className="font-semibold text-foreground">{filteredProducts.length}</span>{" "}
-                            productos
-                        </p>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                disabled={safePage === 1}
-                                className="flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                                <ChevronLeft className="h-3.5 w-3.5" /> Anterior
-                            </button>
-                            <span className="text-xs font-mono text-muted-foreground px-2">
-                                {safePage} / {totalPages}
-                            </span>
-                            <button
-                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                disabled={safePage === totalPages}
-                                className="flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                                Siguiente <ChevronRight className="h-3.5 w-3.5" />
-                            </button>
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between border-t pt-4 pb-20">
+                            <p className="text-xs text-muted-foreground">
+                                Mostrando página{" "}
+                                <span className="font-semibold text-foreground">{currentPage}</span>{" "}
+                                de{" "}
+                                <span className="font-semibold text-foreground">{totalPages}</span>{" "}
+                                ({total} productos)
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className="flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    <ChevronLeft className="h-3.5 w-3.5" /> Anterior
+                                </button>
+                                <span className="text-xs font-mono text-muted-foreground px-2">
+                                    {currentPage} / {totalPages}
+                                </span>
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className="flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Siguiente <ChevronRight className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </>
             )}
         </div>

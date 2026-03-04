@@ -8,8 +8,17 @@ export const metadata: Metadata = {
     title: "Catálogo Visual",
 };
 
-export default async function CatalogPage() {
-    const products = await withTimeout(getProducts(), { rows: [], total: 0, totalPages: 0, page: 1, pageSize: 50 });
+export default async function CatalogPage({
+    searchParams
+}: {
+    searchParams: Promise<{ q?: string; f?: string; p?: string }>
+}) {
+    const params = await searchParams;
+    const q = params.q || "";
+    const f = params.f || "all";
+    const p = params.p ? parseInt(params.p) : 1;
+
+    const products = await withTimeout(getProducts({ search: q, filter: f as any, page: p }), { rows: [], total: 0, totalPages: 0, page: 1, pageSize: 50 });
 
     return (
         <div className="space-y-1">
@@ -28,7 +37,7 @@ export default async function CatalogPage() {
                 </div>
             </div>
 
-            <CatalogGrid products={products?.rows || []} />
+            <CatalogGrid products={products?.rows || []} total={products?.total || 0} totalPages={products?.totalPages || 0} />
         </div>
     );
 }

@@ -2,12 +2,12 @@ import { db } from "@/lib/db";
 import { products, locations } from "@/lib/db/schema";
 import { sql, eq, asc, ilike, or, and, lte, gt } from "drizzle-orm";
 
-const PAGE_SIZE = 1000; // Filas por página en inventario/catálogo para balancear carga inicial vs funcionalidad
+const PAGE_SIZE = 100; // Filas por página en inventario/catálogo para balancear carga inicial vs funcionalidad
 
 export interface GetProductsOptions {
     page?: number;       // 1-indexed
     search?: string;     // buscar en code o name
-    filter?: "all" | "low_stock" | "critical" | "out_of_stock";
+    filter?: "all" | "low_stock" | "critical" | "out_of_stock" | "low" | "out";
 }
 
 /**
@@ -32,9 +32,9 @@ export async function getProducts(options: GetProductsOptions = {}) {
         );
     }
 
-    if (filter === "out_of_stock") {
+    if (filter === "out_of_stock" || filter === "out") {
         conditions.push(eq(products.stock, 0));
-    } else if (filter === "low_stock") {
+    } else if (filter === "low_stock" || filter === "low") {
         conditions.push(
             and(gt(products.stock, 0), lte(products.stock, products.minStock))
         );

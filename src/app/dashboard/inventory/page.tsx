@@ -8,10 +8,19 @@ export const metadata: Metadata = {
     title: "Inventario",
 };
 
-export default async function InventoryPage() {
+export default async function InventoryPage({
+    searchParams
+}: {
+    searchParams: Promise<{ q?: string; f?: string; p?: string }>
+}) {
+    const params = await searchParams;
+    const q = params.q || "";
+    const f = params.f || "all";
+    const p = params.p ? parseInt(params.p) : 1;
+
     // Queries paralelas a Supabase via Drizzle
     const [products, stats] = await Promise.all([
-        withTimeout(getProducts(), { rows: [], total: 0, totalPages: 0, page: 1, pageSize: 50 }),
+        withTimeout(getProducts({ search: q, filter: f as any, page: p }), { rows: [], total: 0, totalPages: 0, page: 1, pageSize: 50 }),
         withTimeout(getInventoryStats(), { total: 0, located: 0, out_of_stock: 0, low_stock: 0 }),
     ]);
 
@@ -71,7 +80,7 @@ export default async function InventoryPage() {
             </div>
 
             {/* Table — datos reales de Supabase */}
-            <InventoryTable products={products?.rows || []} />
+            <InventoryTable products={products?.rows || []} total={products?.total || 0} totalPages={products?.totalPages || 0} />
         </div>
     );
 }
