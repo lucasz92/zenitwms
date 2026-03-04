@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search, Image as ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useMemo, useTransition } from "react";
+import { Search, Image as ImageIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { ProductCard } from "./product-card";
 import type { ProductRow } from "@/lib/db/queries/products";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,7 @@ export function CatalogGrid({ products, total, totalPages }: CatalogGridProps) {
 
     const [search, setSearch] = useState(searchParams.get("q") || "");
     const [filter, setFilter] = useState<"all" | "missing" | "has_image">(searchParams.get("f") as any || "all");
+    const [isPending, startTransition] = useTransition();
 
     const pageStr = searchParams.get("p") || "1";
     const currentPage = parseInt(pageStr);
@@ -41,7 +42,9 @@ export function CatalogGrid({ products, total, totalPages }: CatalogGridProps) {
                 params.set(key, value);
             }
         });
-        router.push(`?${params.toString()}`, { scroll: false });
+        startTransition(() => {
+            router.push(`?${params.toString()}`, { scroll: false });
+        });
     }, [router, searchParams]);
 
     // Update URL when search or filter changes
@@ -90,7 +93,11 @@ export function CatalogGrid({ products, total, totalPages }: CatalogGridProps) {
                         placeholder="Buscar por código o descripción..."
                         className="h-9 w-full rounded-md border border-input bg-card pl-9 pr-4 text-sm placeholder:text-muted-foreground transition-colors shadow-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                     />
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    {isPending ? (
+                        <Loader2 className="absolute left-3 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : (
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    )}
                 </div>
 
                 <div className="flex bg-muted/50 p-0.5 rounded-lg border border-border/50">

@@ -8,7 +8,8 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Package, FileText, Tag, Barcode, LayoutGrid } from "lucide-react";
+import { MapPin, Package, FileText, Tag, Barcode, LayoutGrid, Printer, CopyPlus, ImageIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { ProductRow } from "@/lib/db/queries/products";
 import { StockBadge } from "./stock-badge";
 import { UNIT_LABELS } from "@/types/product";
@@ -17,9 +18,11 @@ interface ProductDetailsModalProps {
     open: boolean;
     onClose: () => void;
     product: ProductRow | null;
+    onPrint?: () => void;
+    onPrintWarning?: () => void;
 }
 
-export function ProductDetailsModal({ open, onClose, product }: ProductDetailsModalProps) {
+export function ProductDetailsModal({ open, onClose, product, onPrint, onPrintWarning }: ProductDetailsModalProps) {
     if (!product) return null;
 
     return (
@@ -133,6 +136,44 @@ export function ProductDetailsModal({ open, onClose, product }: ProductDetailsMo
                                 {product.proveedor || product.sinonimo || '-'}
                             </div>
                         </div>
+                        {/* Image Grid Slot */}
+                        <div className="col-span-2 mt-2 space-y-1">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                <ImageIcon className="w-3.5 h-3.5" />
+                                Fotografía
+                            </div>
+                            {product.image_url ? (
+                                <div className="border border-border/50 rounded-lg overflow-hidden bg-muted/20 w-full h-[200px] flex items-center justify-center">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={product.image_url} alt={product.name} className="max-w-full max-h-full object-contain" />
+                                </div>
+                            ) : (
+                                <div className="text-sm text-muted-foreground/60 italic py-2">
+                                    No hay foto para este producto.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer with actions */}
+                <div className="p-4 bg-muted/20 border-t border-border flex flex-col sm:flex-row gap-3">
+                    <Button variant="outline" className="w-full sm:flex-1 font-semibold" onClick={onClose}>
+                        Cerrar
+                    </Button>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        {onPrintWarning && (
+                            <Button variant="secondary" className="w-full sm:w-auto text-orange-600 dark:text-orange-500 hover:text-orange-700 hover:bg-orange-500/10 font-bold" onClick={onPrintWarning}>
+                                <CopyPlus className="w-4 h-4 mr-2" />
+                                2da Ubicación
+                            </Button>
+                        )}
+                        {onPrint && (
+                            <Button className="w-full sm:w-auto font-bold shadow-sm" onClick={onPrint}>
+                                <Printer className="w-4 h-4 mr-2" />
+                                Imprimir Etiqueta
+                            </Button>
+                        )}
                     </div>
                 </div>
             </DialogContent>

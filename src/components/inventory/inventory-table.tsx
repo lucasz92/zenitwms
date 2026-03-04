@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo, CSSProperties, useCallback, useEffect } from "react";
+import { useState, useMemo, CSSProperties, useCallback, useEffect, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
 import {
     Plus, Search, Download, FileSpreadsheet, FileText, FileJson, ArrowUpDown,
     ChevronLeft, ChevronRight, CopyPlus, AlertCircle, Printer, FileText as FileTextIcon,
-    ImagePlus, MoreHorizontal, Pencil, Trash2, Package, GripHorizontal
+    ImagePlus, MoreHorizontal, Pencil, Trash2, Package, GripHorizontal, Loader2
 } from "lucide-react";
 import {
     useReactTable,
@@ -148,6 +148,7 @@ export function InventoryTable({ products, total, totalPages }: InventoryTablePr
     const [search, setSearch] = useState(searchParams.get("q") || "");
     const [statusFilter, setStatusFilter] = useState<"all" | "low" | "critical" | "out">(searchParams.get("f") as any || "all");
     const [page, setPage] = useState(parseInt(searchParams.get("p") || "1"));
+    const [isPending, startTransition] = useTransition();
 
     const debouncedSearch = useDebounce(search, 500);
 
@@ -160,7 +161,9 @@ export function InventoryTable({ products, total, totalPages }: InventoryTablePr
                 params.set(key, value);
             }
         });
-        router.push(`?${params.toString()}`, { scroll: false });
+        startTransition(() => {
+            router.push(`?${params.toString()}`, { scroll: false });
+        });
     }, [router, searchParams]);
 
     useEffect(() => {
@@ -463,7 +466,11 @@ export function InventoryTable({ products, total, totalPages }: InventoryTablePr
                 {/* Toolbar */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="relative flex-1 max-w-xs">
-                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        {isPending ? (
+                            <Loader2 className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+                        ) : (
+                            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        )}
                         <input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -636,7 +643,19 @@ export function InventoryTable({ products, total, totalPages }: InventoryTablePr
             <ProductModal open={createOpen} onClose={() => setCreateOpen(false)} product={null} />
             <ProductModal open={!!editProduct} onClose={() => setEditProduct(null)} product={editProduct} />
             <DeleteProductDialog open={!!deleteProduct} onClose={() => setDeleteProduct(null)} product={deleteProduct} />
-            <ProductDetailsModal open={!!detailsProduct} onClose={() => setDetailsProduct(null)} product={detailsProduct} />
+            <ProductDetailsModal
+                open={!!detailsProduct}
+                onClose={() => setDetailsProduct(null)}
+                product={detailsProduct}
+                onPrint={() => {
+                    setPrintProduct(detailsProduct);
+                    setDetailsProduct(null);
+                }}
+                onPrintWarning={() => {
+                    setWarningPrintProduct(detailsProduct);
+                    setDetailsProduct(null);
+                }}
+            />
             <PrintModal open={!!printProduct} onClose={() => setPrintProduct(null)} product={printProduct} />
             <PrintWarningModal open={!!warningPrintProduct} onClose={() => setWarningPrintProduct(null)} product={warningPrintProduct} />
             <ReportAlertModal open={!!alertProduct} onClose={() => setAlertProduct(null)} product={alertProduct} />
