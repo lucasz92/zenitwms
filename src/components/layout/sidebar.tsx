@@ -148,10 +148,9 @@ export function Sidebar({ userRole = "employee", collapsed = false }: SidebarPro
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -10 }}
-                                className="text-base font-bold tracking-tight text-foreground truncate"
+                                className="text-[15px] font-bold tracking-tight text-foreground truncate"
                             >
-                                Zenit
-                                <span className="text-primary font-light">WMS</span>
+                                Zenit<span className="text-primary">WMS</span>
                             </motion.span>
                         )}
                     </AnimatePresence>
@@ -181,7 +180,7 @@ export function Sidebar({ userRole = "employee", collapsed = false }: SidebarPro
                             }}
                         >
                             {!collapsed && (
-                                <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                                <p className="mb-1.5 px-3 text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground/50">
                                     {group.label}
                                 </p>
                             )}

@@ -96,25 +96,50 @@ export function SettingsView() {
         if (!previewData) return;
 
         setIsImporting(true);
-        toast.loading(`Enviando ${previewData.length} filas al servidor...`, { id: "import" });
 
-        try {
-            // Aseguramos que la info viaje limpia al Server Action (solo primitivos)
-            const cleanData = JSON.parse(JSON.stringify(previewData));
-            const res = await importBulkProducts(cleanData, duplicateAction);
-
-            if (res.success) {
-                toast.success(`Importación exitosa. Agregados: ${res.inserted}, Actualizados: ${res.updated || 0}, Saltados: ${res.skipped || 0}`, { id: "import", duration: 6000 });
-                setPreviewData(null);
-            } else {
-                toast.error(res.error || "Falló la importación masiva.", { id: "import" });
-            }
-        } catch (error) {
-            console.error(error);
-            toast.error("Error de conexión durante la importación.", { id: "import" });
-        } finally {
-            setIsImporting(false);
+        const CHUNK_SIZE = 500;
+        const chunks: any[][] = [];
+        for (let i = 0; i < previewData.length; i += CHUNK_SIZE) {
+            chunks.push(previewData.slice(i, i + CHUNK_SIZE));
         }
+
+        let totalInserted = 0;
+        let totalUpdated = 0;
+        let totalSkipped = 0;
+        let hasError = false;
+
+        for (let i = 0; i < chunks.length; i++) {
+            toast.loading(`Enviando lote ${i + 1} de ${chunks.length}...`, { id: "import" });
+            try {
+                const cleanChunk = JSON.parse(JSON.stringify(chunks[i]));
+                const res = await importBulkProducts(cleanChunk, duplicateAction);
+
+                if (res.success) {
+                    totalInserted += res.inserted ?? 0;
+                    totalUpdated += res.updated ?? 0;
+                    totalSkipped += res.skipped ?? 0;
+                } else {
+                    toast.error(`Error en lote ${i + 1}: ${res.error}`, { id: "import" });
+                    hasError = true;
+                    break;
+                }
+            } catch (error) {
+                console.error(error);
+                toast.error(`Error de conexión en lote ${i + 1}.`, { id: "import" });
+                hasError = true;
+                break;
+            }
+        }
+
+        if (!hasError) {
+            toast.success(
+                `Importación exitosa. Agregados: ${totalInserted}, Actualizados: ${totalUpdated}, Saltados: ${totalSkipped}`,
+                { id: "import", duration: 6000 }
+            );
+            setPreviewData(null);
+        }
+
+        setIsImporting(false);
     };
 
     return (

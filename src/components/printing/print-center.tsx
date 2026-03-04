@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Printer, Search, MapPin, Box, Tags, Maximize, Trash2, Plus, List } from 'lucide-react';
+import { Printer, Search, Box, Tags, Maximize, Trash2, Plus, List } from 'lucide-react';
 import { searchProductsForPrint } from '@/app/actions/products';
 
 // Definimos el tipo del resultado del searchProductsForPrint
@@ -92,51 +92,55 @@ export function PrintCenter() {
     const renderPosterContent = () => {
         if (!selectedProduct) return null;
         return (
-            <div className="border-[4px] border-black h-full p-8 flex flex-col justify-between bg-white box-border text-black">
-                <div className="flex justify-between items-start border-b-[3px] border-black pb-4">
-                    <div className="text-xl font-bold uppercase tracking-widest text-slate-500 print:text-black">IDENTIFICACIÓN DE PALLET</div>
+            <div className="border-[4px] border-black h-full flex flex-col bg-white box-border text-black overflow-hidden">
+
+                {/* ── Header ─────────────────────────────────────── */}
+                <div className="flex justify-between items-center border-b-[3px] border-black px-8 py-3 shrink-0">
+                    <div className="text-lg font-black uppercase tracking-[0.2em] text-black">
+                        IDENTIFICACIÓN DE PALLET
+                    </div>
                     <div className="text-right">
-                        <div className="text-3xl font-bold font-mono leading-none">{new Date().toLocaleDateString()}</div>
-                        <div className="text-sm text-slate-400 font-mono print:text-slate-600">{new Date().toLocaleTimeString()}</div>
+                        <div className="text-2xl font-bold font-mono leading-none">{new Date().toLocaleDateString()}</div>
+                        <div className="text-sm font-mono text-slate-500 print:text-black">{new Date().toLocaleTimeString()}</div>
                     </div>
                 </div>
 
-                <div className="text-center flex-1 flex flex-col justify-center py-4">
-                    {/* Code: Huge and Black */}
-                    <div className="mb-2">
-                        <span className="text-[120px] leading-none font-black tracking-tighter text-black block">{selectedProduct.codigo}</span>
+                {/* ── Código + Nombre ─────────────────────────────── */}
+                <div className="flex-1 flex flex-col items-center justify-center px-10 gap-3">
+                    <div className="text-[128px] leading-[1] font-black tracking-tighter text-black text-center w-full truncate">
+                        {selectedProduct.codigo}
                     </div>
-
-                    {/* Name: Large, B/W Friendly */}
-                    <h2 className="text-5xl font-bold leading-tight mb-8 line-clamp-2 px-4 text-black">{selectedProduct.nombre}</h2>
-
-                    {/* Location */}
-                    <div className="flex justify-center border-t-[3px] border-black pt-8 border-dashed">
-                        <div>
-                            <div className="text-xl font-bold uppercase text-black mb-1 tracking-widest">UBICACIÓN</div>
-                            <div className="text-6xl font-black font-mono flex items-center gap-4 border-[3px] border-black px-8 py-4 rounded-xl">
-                                <MapPin className="text-black" size={48} />
-                                {selectedProduct.ubicacion?.deposito || 'GEN'} - {selectedProduct.ubicacion?.estante || '0'}-{selectedProduct.ubicacion?.fila || '0'}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Big Quantity Centered - High Contrast B/W Friendly */}
-                    <div className="mt-8 mx-12">
-                        <div className="text-xl font-bold uppercase text-black mb-2 tracking-widest">CANTIDAD CONTENIDA</div>
-                        <div className="border-[6px] border-black bg-white text-black py-4 rounded-3xl flex items-baseline justify-center gap-4 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] print:shadow-none">
-                            <span className="text-[120px] leading-none font-black">{posterQty}</span>
-                            <span className="text-5xl font-bold uppercase">{selectedProduct.unidad_medida}</span>
-                        </div>
+                    <div
+                        className="text-[44px] font-bold text-black text-center leading-tight w-full"
+                        style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                        }}
+                    >
+                        {selectedProduct.nombre}
                     </div>
                 </div>
 
-                {/* Footer decoration */}
-                <div className="border-t-[3px] border-black pt-2 flex justify-between items-center text-black">
-                    <span className="text-sm font-mono font-bold tracking-widest uppercase">INVENTARIO SYSTEM</span>
+                {/* ── Cantidad ────────────────────────────────────── */}
+                <div className="border-t-[3px] border-dashed border-black mx-8 mb-4" />
+                <div className="flex flex-col items-center px-10 pb-4 shrink-0">
+                    <div className="text-sm font-black uppercase tracking-[0.25em] text-black mb-2">
+                        CANTIDAD CONTENIDA
+                    </div>
+                    <div className="w-full border-[5px] border-black rounded-2xl flex items-baseline justify-center gap-4 py-3">
+                        <span className="text-[90px] leading-none font-black">{posterQty}</span>
+                        <span className="text-[40px] font-bold uppercase">{selectedProduct.unidad_medida}</span>
+                    </div>
+                </div>
+
+                {/* ── Footer ─────────────────────────────────────── */}
+                <div className="border-t-[3px] border-black px-8 py-2 flex justify-between items-center shrink-0">
+                    <span className="text-xs font-mono font-bold tracking-widest uppercase">INVENTARIO SYSTEM</span>
                     <div className="flex items-center gap-2">
-                        <Box size={16} />
-                        <span className="text-sm font-mono font-bold">CONTROL INTERNO</span>
+                        <Box size={14} />
+                        <span className="text-xs font-mono font-bold">CONTROL INTERNO</span>
                     </div>
                 </div>
             </div>
@@ -162,14 +166,27 @@ export function PrintCenter() {
             ) : (
                 <style>{`
                     @media print {
-                        @page { size: A4 landscape; margin: 0; }
-                        /* Remove height and overflow constraints from ancestors but preserve hidden elements */
-                        html, body, main, .h-screen, .overflow-hidden, .flex, .flex-col, .h-full, .h-\\[100dvh\\] { height: auto !important; min-height: auto !important; max-height: none !important; overflow: visible !important; }
-                        /* Specifically target the NextJS root container */
+                        @page {
+                            size: 297mm 210mm;
+                            margin: 0;
+                        }
+                        html, body, main, .h-screen, .overflow-hidden, .flex, .flex-col, .h-full, .h-\\[100dvh\\] {
+                            height: auto !important;
+                            min-height: auto !important;
+                            max-height: none !important;
+                            overflow: visible !important;
+                        }
                         body > div:first-child { height: auto !important; overflow: visible !important; display: block !important; }
-                        /* Force hide layout elements using a high specificity selector */
                         nav, aside, header, footer, [role="navigation"], .no-print, .print\\:hidden, [class*="print:hidden"] { display: none !important; }
-                        body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
+                        body {
+                            background: white !important;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                            margin: 0;
+                            padding: 0;
+                            width: 297mm;
+                            height: 210mm;
+                        }
                     }
                 `}</style>
             )}
@@ -377,8 +394,16 @@ export function PrintCenter() {
                 {activeTab === 'posters' && selectedProduct && (
                     <>
                         {/* PREVIEW ONLY CONTAINER (Scaled) - Hidden on Print */}
-                        <div className="w-full h-full overflow-auto flex justify-center items-center py-4 px-4 print:hidden min-h-[500px]">
-                            <div className="origin-center transform scale-[0.4] sm:scale-[0.5] md:scale-[0.6] lg:scale-[0.8] transition-transform duration-300 shadow-2xl">
+                        <div className="w-full overflow-auto flex justify-center items-start py-4 px-4 print:hidden min-h-[300px]">
+                            <div
+                                className="origin-top-left transition-transform duration-300 shadow-2xl"
+                                style={{
+                                    transform: 'scale(0.38)',
+                                    width: '297mm',
+                                    height: '210mm',
+                                    flexShrink: 0,
+                                }}
+                            >
                                 <div className="w-[297mm] h-[210mm] relative bg-white">
                                     {renderPosterContent()}
                                 </div>

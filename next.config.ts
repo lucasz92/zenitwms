@@ -7,6 +7,11 @@ const isDev = process.env.NODE_ENV === "development";
 let nextConfig: NextConfig = {
   // Silencia warning de múltiples lockfiles
   turbopack: {},
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
 };
 
 // Solo aplica withPWA en producción
