@@ -58,6 +58,25 @@ async function startMovementsMigration() {
             const tid = raw.transferId || `MIG-${doc.id.substring(0, 8)}`;
             console.log(`Migrando: ${tid}...`);
 
+            // Check if transfer already exists
+            const { data: existingTransfer, error: checkError } = await supabase
+                .from('transfer_orders')
+                .select('id')
+                .eq('transfer_id', tid)
+                .limit(1);
+
+            if (checkError) {
+                console.error(`❌ Falló la verificación de duplicado para ${tid}:`, checkError.message);
+                errorsCount++;
+                continue;
+            }
+
+            if (existingTransfer && existingTransfer.length > 0) {
+                console.log(`[SKIP] Remito ${tid} ya migrado.`);
+                orderCount++; // Count as processed
+                continue;
+            }
+
             // 1. Insert Header
             const { data: orderData, error: orderError } = await supabase
                 .from('transfer_orders')

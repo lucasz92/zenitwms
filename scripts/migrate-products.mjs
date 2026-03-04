@@ -69,8 +69,11 @@ async function startProductsMigration() {
                 if (!doc.exists) continue;
                 const prod = doc.data();
 
-                const code = String(prod.codigo || prod.code || `MIG-${doc.id}`).trim().toUpperCase();
-                if (!code) continue;
+                const code = String(prod.codigo || prod.code || "").trim().toUpperCase();
+                if (!code) {
+                    console.log(`⚠️ Skip: Producto '${prod.nombre || prod.descripcion}' no tiene código explícito (ID fb: ${doc.id}).`);
+                    continue;
+                }
 
                 const name = String(prod.nombre || prod.descripcion || "Sin Descripción").trim();
                 const stock = parseInt(prod.cantidad || prod.stock) || 0;

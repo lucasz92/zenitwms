@@ -1,0 +1,47 @@
+[dotenv@17.3.1] injecting env (16) from .env.local -- tip: ΓÜÖ∩╕Å  write to custom object with { processEnv: myObject }
+=== INICIANDO EXTRACCI├ôN Y MIGRACI├ôN EN LOTE DE PRODUCTOS ===
+Estrategia Segura: Traer referencias primero (sin datos) para evitar Quota Exceeded.
+(node:26288) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+node:internal/process/promises:394
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+Error: 8 RESOURCE_EXHAUSTED: Quota exceeded.
+    at callErrorFromStatus (C:\buscadormtfweb\zenit-wms\node_modules\@grpc\grpc-js\build\src\call.js:32:19)
+    at Object.onReceiveStatus (C:\buscadormtfweb\zenit-wms\node_modules\@grpc\grpc-js\build\src\client.js:359:73)
+    at Object.onReceiveStatus (C:\buscadormtfweb\zenit-wms\node_modules\@grpc\grpc-js\build\src\client-interceptors.js:327:181)
+    at C:\buscadormtfweb\zenit-wms\node_modules\@grpc\grpc-js\build\src\resolving-call.js:135:78
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+for call at
+    at ServiceClientImpl.makeServerStreamRequest (C:\buscadormtfweb\zenit-wms\node_modules\@grpc\grpc-js\build\src\client.js:342:32)
+    at ServiceClientImpl.<anonymous> (C:\buscadormtfweb\zenit-wms\node_modules\@grpc\grpc-js\build\src\make-client.js:105:19)
+    at C:\buscadormtfweb\zenit-wms\node_modules\@google-cloud\firestore\build\src\v1\firestore_client.js:242:33
+    at C:\buscadormtfweb\zenit-wms\node_modules\google-gax\build\src\streamingCalls\streamingApiCaller.js:38:28
+    at C:\buscadormtfweb\zenit-wms\node_modules\google-gax\build\src\normalCalls\timeout.js:44:16
+    at Object.request (C:\buscadormtfweb\zenit-wms\node_modules\google-gax\build\src\streamingCalls\streaming.js:234:40)
+    at makeRequest (C:\buscadormtfweb\zenit-wms\node_modules\retry-request\index.js:159:28)
+    at retryRequest (C:\buscadormtfweb\zenit-wms\node_modules\retry-request\index.js:119:5)
+    at StreamProxy.setStream (C:\buscadormtfweb\zenit-wms\node_modules\google-gax\build\src\streamingCalls\streaming.js:225:37)
+    at StreamingApiCaller.call (C:\buscadormtfweb\zenit-wms\node_modules\google-gax\build\src\streamingCalls\streamingApiCaller.js:54:16)
+Caused by: Error
+    at QueryUtil._getResponse (C:\buscadormtfweb\zenit-wms\node_modules\@google-cloud\firestore\build\src\reference\query-util.js:44:23)
+    at Query._getResponse (C:\buscadormtfweb\zenit-wms\node_modules\@google-cloud\firestore\build\src\reference\query.js:784:32)
+    at Query._get (C:\buscadormtfweb\zenit-wms\node_modules\@google-cloud\firestore\build\src\reference\query.js:777:35)
+    at C:\buscadormtfweb\zenit-wms\node_modules\@google-cloud\firestore\build\src\reference\query.js:745:43
+    at C:\buscadormtfweb\zenit-wms\node_modules\@google-cloud\firestore\build\src\telemetry\enabled-trace-util.js:110:30
+    at NoopContextManager.with (C:\buscadormtfweb\zenit-wms\node_modules\@opentelemetry\api\build\src\context\NoopContextManager.js:25:19)
+    at ContextAPI.with (C:\buscadormtfweb\zenit-wms\node_modules\@opentelemetry\api\build\src\api\context.js:60:46)
+    at NoopTracer.startActiveSpan (C:\buscadormtfweb\zenit-wms\node_modules\@opentelemetry\api\build\src\trace\NoopTracer.js:65:31)
+    at ProxyTracer.startActiveSpan (C:\buscadormtfweb\zenit-wms\node_modules\@opentelemetry\api\build\src\trace\ProxyTracer.js:36:24)
+    at EnabledTraceUtil.startActiveSpan (C:\buscadormtfweb\zenit-wms\node_modules\@google-cloud\firestore\build\src\telemetry\enabled-trace-util.js:102:28) {
+  code: 8,
+  details: 'Quota exceeded.',
+  metadata: Metadata {
+    internalRepr: Map(1) { 'x-debug-tracking-id' => [ '17955870334627148146;o=1' ] },
+    opaqueData: Map(0) {},
+    options: {}
+  }
+}
+
+Node.js v22.11.0

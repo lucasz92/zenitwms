@@ -97,7 +97,7 @@ async function startProductsMigration() {
             const productsToUpsert = [];
 
             for (const prod of batch) {
-                const code = String(prod.codigo || prod.code || `MIG-${prod.id}`)
+                const code = String(prod.codigo || prod.code || "")
                     .trim()
                     .toUpperCase();
                 if (!code) continue;
@@ -149,7 +149,7 @@ async function startProductsMigration() {
             const productIdsToDeleteLocs = [];
 
             for (const prod of batch) {
-                const code = String(prod.codigo || prod.code || `MIG-${prod.id}`)
+                const code = String(prod.codigo || prod.code || "")
                     .trim()
                     .toUpperCase();
                 if (!codeToIdMap[code]) continue;

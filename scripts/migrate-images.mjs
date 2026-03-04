@@ -49,7 +49,7 @@ async function startImageMigration() {
 
     // Create Supabase Bucket if not exists (try/catch silently fails if exists)
     try {
-        await supabase.storage.createBucket('products-media', { public: true });
+        await supabase.storage.createBucket('products', { public: true });
     } catch (e) { }
 
     const snapshot = await db.collection('catalogo_imagenes').get();
@@ -61,14 +61,25 @@ async function startImageMigration() {
 
     for (const doc of snapshot.docs) {
         const data = doc.data();
-        const base64Str = data.base64;
-        const productCode = data.productCode; // The code used in the new SQL DB
+        let productCode = data.productCode; // The code used in the new SQL DB
+        const fbProductId = data.productId; // The ID in old Firebase collection
 
-        if (!productCode || !base64Str) {
-            console.log(`[SKIP] Doc ID: ${doc.id} - Faltan datos (productCode o base64).`);
+        // If productCode is missing but productId exists, try to find it in 'productos' collection
+        if (!productCode && fbProductId) {
+            const pSnap = await db.collection('productos').doc(fbProductId).get();
+            if (pSnap.exists) {
+                const pData = pSnap.data();
+                productCode = pData.codigo || pData.code;
+            }
+        }
+
+        if (!productCode) {
+            console.log(`[SKIP] Doc ID: ${doc.id} - No se pudo determinar el productCode.`);
             skipCount++;
             continue;
         }
+
+        productCode = String(productCode).trim().toUpperCase();
 
         // Find product ID in Supabase
         const { data: prods, error: pErr } = await supabase
@@ -79,6 +90,25 @@ async function startImageMigration() {
 
         if (pErr || !prods || prods.length === 0) {
             console.log(`[SKIP] Image para ${productCode}. El producto no existe en Supabase WMS.`);
+            skipCount++;
+            continue;
+        }
+
+        // Skip if product already has image
+        const { data: currentProd, error: cpErr } = await supabase
+            .from('products')
+            .select('image_url')
+            .eq('code', productCode)
+            .single();
+
+        if (cpErr) {
+            console.error(`❌ Error consultando producto ${productCode}:`, cpErr.message);
+            errorCount++;
+            continue;
+        }
+
+        if (currentProd.image_url) {
+            console.log(`[SKIP] El producto ${productCode} ya tiene imagen.`);
             skipCount++;
             continue;
         }
@@ -95,7 +125,7 @@ async function startImageMigration() {
 
             // 1. Upload to Supabase Storage
             const { error: uploadError } = await supabase.storage
-                .from('products-media')
+                .from('products')
                 .upload(fileName, buffer, {
                     contentType: mimeType,
                     upsert: true
@@ -109,7 +139,7 @@ async function startImageMigration() {
 
             // 2. Obtener URL Publica
             const { data: publicUrlData } = supabase.storage
-                .from('products-media')
+                .from('products')
                 .getPublicUrl(fileName);
 
             const publicUrl = publicUrlData.publicUrl;
@@ -117,7 +147,7 @@ async function startImageMigration() {
             // 3. Update SQL Table
             const { error: sqlError } = await supabase
                 .from('products')
-                .update({ imageUrl: publicUrl })
+                .update({ image_url: publicUrl })
                 .eq('id', productId);
 
             if (sqlError) {

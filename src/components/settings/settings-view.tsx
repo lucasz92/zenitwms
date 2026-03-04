@@ -168,23 +168,19 @@ export function SettingsView() {
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <div className="relative w-full">
-                        <Button
-                            disabled={isImporting}
-                            className="w-full bg-purple-600 hover:bg-purple-700 pointer-events-none"
-                        >
-                            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+                    <label className={`w-full ${isImporting ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
+                        <div className={`flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white transition-colors ${isImporting ? "bg-purple-400" : "bg-purple-600 hover:bg-purple-700"}`}>
+                            {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
                             {isImporting ? "Procesando Importación..." : "Subir Excel para Importar"}
-                        </Button>
+                        </div>
                         <input
                             type="file"
                             accept=".xlsx, .xls, .csv"
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                            className="hidden"
                             disabled={isImporting}
                             onChange={handleImportFile}
-                            title="Selecciona archivo Excel"
                         />
-                    </div>
+                    </label>
                 </CardFooter>
             </Card>
 

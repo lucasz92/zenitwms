@@ -1,0 +1,6 @@
+[dotenv@17.3.1] injecting env (16) from .env.local -- tip: ≡ƒ¢í∩╕Å auth for agents: https://vestauth.com
+=== INICIANDO EXTRACCI├ôN Y MIGRACI├ôN REST (ANTI-QUOTA) ===
+≡ƒôí Descargando desde Firebase REST API (Fragmentos de 5000)...
+Γ¥î Fallo general de script: Error: Firebase REST Failed: Too Many Requests
+    at startProductsMigration (file:///C:/buscadormtfweb/zenit-wms/scripts/migrate-products-rest.mjs:57:23)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
