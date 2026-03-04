@@ -92,26 +92,26 @@ export function PrintCenter() {
     const renderPosterContent = () => {
         if (!selectedProduct) return null;
         return (
-            <div className="border-[4px] border-black h-full flex flex-col bg-white box-border text-black overflow-hidden">
+            <div className="border-[6px] border-black h-full flex flex-col bg-white box-border text-black overflow-hidden w-full">
 
                 {/* ── Header ─────────────────────────────────────── */}
-                <div className="flex justify-between items-center border-b-[3px] border-black px-8 py-3 shrink-0">
-                    <div className="text-lg font-black uppercase tracking-[0.2em] text-black">
+                <div className="flex justify-between items-center border-b-[4px] border-black px-12 py-6 shrink-0">
+                    <div className="text-3xl font-black uppercase tracking-[0.2em] text-black">
                         IDENTIFICACIÓN DE PALLET
                     </div>
                     <div className="text-right">
-                        <div className="text-2xl font-bold font-mono leading-none">{new Date().toLocaleDateString()}</div>
-                        <div className="text-sm font-mono text-slate-500 print:text-black">{new Date().toLocaleTimeString()}</div>
+                        <div className="text-3xl font-bold font-mono leading-none">{new Date().toLocaleDateString()}</div>
+                        <div className="text-lg font-mono text-slate-500 print:text-black mt-1">{new Date().toLocaleTimeString()}</div>
                     </div>
                 </div>
 
                 {/* ── Código + Nombre ─────────────────────────────── */}
-                <div className="flex-1 flex flex-col items-center justify-center px-10 gap-3">
-                    <div className="text-[128px] leading-[1] font-black tracking-tighter text-black text-center w-full truncate">
+                <div className="flex-1 flex flex-col items-center justify-center px-12 gap-6">
+                    <div className="text-[180px] leading-[0.9] font-black tracking-tighter text-black text-center w-full truncate">
                         {selectedProduct.codigo}
                     </div>
                     <div
-                        className="text-[44px] font-bold text-black text-center leading-tight w-full"
+                        className="text-[64px] font-bold text-black text-center leading-[1] w-full px-4"
                         style={{
                             display: '-webkit-box',
                             WebkitLineClamp: 2,
@@ -124,23 +124,23 @@ export function PrintCenter() {
                 </div>
 
                 {/* ── Cantidad ────────────────────────────────────── */}
-                <div className="border-t-[3px] border-dashed border-black mx-8 mb-4" />
-                <div className="flex flex-col items-center px-10 pb-4 shrink-0">
-                    <div className="text-sm font-black uppercase tracking-[0.25em] text-black mb-2">
+                <div className="border-t-[4px] border-dashed border-black mx-12 mb-8" />
+                <div className="flex flex-col items-center px-12 pb-10 shrink-0">
+                    <div className="text-2xl font-black uppercase tracking-[0.3em] text-black mb-4">
                         CANTIDAD CONTENIDA
                     </div>
-                    <div className="w-full border-[5px] border-black rounded-2xl flex items-baseline justify-center gap-4 py-3">
-                        <span className="text-[90px] leading-none font-black">{posterQty}</span>
-                        <span className="text-[40px] font-bold uppercase">{selectedProduct.unidad_medida}</span>
+                    <div className="w-full border-[6px] border-black rounded-[32px] flex items-baseline justify-center gap-6 py-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                        <span className="text-[150px] leading-none font-black">{posterQty}</span>
+                        <span className="text-[60px] font-bold uppercase">{selectedProduct.unidad_medida}</span>
                     </div>
                 </div>
 
                 {/* ── Footer ─────────────────────────────────────── */}
-                <div className="border-t-[3px] border-black px-8 py-2 flex justify-between items-center shrink-0">
-                    <span className="text-xs font-mono font-bold tracking-widest uppercase">INVENTARIO SYSTEM</span>
-                    <div className="flex items-center gap-2">
-                        <Box size={14} />
-                        <span className="text-xs font-mono font-bold">CONTROL INTERNO</span>
+                <div className="border-t-[4px] border-black px-12 py-4 flex justify-between items-center shrink-0 bg-slate-50">
+                    <span className="text-lg font-mono font-bold tracking-[0.3em] uppercase">INVENTARIO SYSTEM</span>
+                    <div className="flex items-center gap-3">
+                        <Box size={24} />
+                        <span className="text-lg font-mono font-bold uppercase tracking-widest">CONTROL INTERNO</span>
                     </div>
                 </div>
             </div>
@@ -167,10 +167,10 @@ export function PrintCenter() {
                 <style>{`
                     @media print {
                         @page {
-                            size: 297mm 210mm;
+                            size: A4 landscape;
                             margin: 0;
                         }
-                        html, body, main, .h-screen, .overflow-hidden, .flex, .flex-col, .h-full, .h-\\[100dvh\\] {
+                        html, body, main, .h-screen, .overflow-hidden, .flex, .flex-col, .h-\\[100dvh\\] {
                             height: auto !important;
                             min-height: auto !important;
                             max-height: none !important;
@@ -182,10 +182,11 @@ export function PrintCenter() {
                             background: white !important;
                             -webkit-print-color-adjust: exact;
                             print-color-adjust: exact;
-                            margin: 0;
-                            padding: 0;
+                            margin: 0 !important;
+                            padding: 0 !important;
                             width: 297mm;
                             height: 210mm;
+                            overflow: hidden;
                         }
                     }
                 `}</style>
@@ -411,7 +412,7 @@ export function PrintCenter() {
                         </div>
 
                         {/* PRINT ONLY CONTAINER (Full Scale) - Visible only on Print - NO SCALING */}
-                        <div className="hidden print:block w-[297mm] h-[210mm] bg-white p-0 m-0 box-border overflow-hidden">
+                        <div className="hidden print:flex flex-col w-[297mm] h-[210mm] bg-white p-0 m-0 box-border overflow-hidden fixed top-0 left-0 z-[9999]">
                             {renderPosterContent()}
                         </div>
                     </>
