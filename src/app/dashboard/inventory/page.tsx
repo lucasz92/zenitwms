@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default async function InventoryPage() {
     // Queries paralelas a Supabase via Drizzle
     const [products, stats] = await Promise.all([
-        withTimeout(getProducts(), []),
+        withTimeout(getProducts(), { rows: [], total: 0, totalPages: 0, page: 1, pageSize: 50 }),
         withTimeout(getInventoryStats(), { total: 0, located: 0, out_of_stock: 0, low_stock: 0 }),
     ]);
 
@@ -71,7 +71,7 @@ export default async function InventoryPage() {
             </div>
 
             {/* Table — datos reales de Supabase */}
-            <InventoryTable products={products} />
+            <InventoryTable products={products?.rows || []} />
         </div>
     );
 }

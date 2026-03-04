@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CatalogPage() {
-    const products = await withTimeout(getProducts(), []);
+    const products = await withTimeout(getProducts(), { rows: [], total: 0, totalPages: 0, page: 1, pageSize: 50 });
 
     return (
         <div className="space-y-1">
@@ -28,7 +28,7 @@ export default async function CatalogPage() {
                 </div>
             </div>
 
-            <CatalogGrid products={products} />
+            <CatalogGrid products={products?.rows || []} />
         </div>
     );
 }

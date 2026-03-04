@@ -18,15 +18,15 @@ export const metadata: Metadata = {
 };
 
 export default async function MovementsPage() {
-    const [movements, stats, allProducts, transfers] = await Promise.all([
+    const [movements, stats, productsData, transfers] = await Promise.all([
         withTimeout(getMovements(200), []),
         withTimeout(getMovementStats(), { today: 0, week: 0, entries: 0, exits: 0 }),
-        withTimeout(getProducts(), []),
+        withTimeout(getProducts(), { rows: [], total: 0, totalPages: 0, page: 1, pageSize: 50 }),
         withTimeout(getTransfers(), []),
     ]);
 
     // Transformar productos en formato mínimo para el selector del modal
-    const productOptions = allProducts.map((p) => ({
+    const productOptions = (productsData?.rows || []).map((p) => ({
         id: p.id,
         code: p.code,
         name: p.name,

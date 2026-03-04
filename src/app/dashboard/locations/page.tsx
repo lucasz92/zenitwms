@@ -16,13 +16,13 @@ export const metadata: Metadata = {
 };
 
 export default async function LocationsPage() {
-    const [locations, stats, products] = await Promise.all([
+    const [locations, stats, productsData] = await Promise.all([
         withTimeout(getLocations(), []),
         withTimeout(getLocationStats(), { total: 0, occupied: 0, available: 0, occupancyRate: 0 }),
-        withTimeout(getProducts(), []),
+        withTimeout(getProducts(), { rows: [], total: 0, totalPages: 0, page: 1, pageSize: 50 }),
     ]);
 
-    const productOptions = products.map((p) => ({
+    const productOptions = (productsData?.rows || []).map((p) => ({
         id: p.id,
         code: p.code,
         name: p.name,

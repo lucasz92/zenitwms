@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { products, locations } from "@/lib/db/schema";
 import { sql, eq, asc, ilike, or, and, lte, gt } from "drizzle-orm";
 
-const PAGE_SIZE = 50; // Filas por página en inventario
+const PAGE_SIZE = 1000; // Filas por página en inventario/catálogo para balancear carga inicial vs funcionalidad
 
 export interface GetProductsOptions {
     page?: number;       // 1-indexed
